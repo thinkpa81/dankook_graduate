@@ -1,16 +1,112 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { getStorage } from "./storage";
 import { 
   insertUserSchema, insertNoticeSchema, insertPaperSchema, 
   insertTalentSchema, insertNoticeCommentSchema, insertPaperCommentSchema 
 } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.hwp', '.hwpx', '.zip'];
+const ALLOWED_MIMETYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/x-hwp',
+  'application/haansofthwp',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/octet-stream'
+];
+
+const storage_multer = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    const baseName = Buffer.from(file.originalname, 'latin1').toString('utf8').replace(ext, '');
+    cb(null, `${uniqueSuffix}-${baseName}${ext}`);
+  }
+});
+
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ALLOWED_EXTENSIONS.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`허용되지 않는 파일 형식입니다: ${ext}`));
+  }
+};
+
+const upload = multer({ 
+  storage: storage_multer,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   const storage = getStorage();
+
+  app.use('/uploads', (req, res, next) => {
+    res.setHeader('Content-Disposition', 'attachment');
+    next();
+  }, express.static(uploadsDir));
+
+  const ADMIN_USERNAME = "thinkpa";
+  
+  app.post("/api/upload", async (req, res, next) => {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "로그인이 필요합니다" });
+    }
+    
+    if (req.session.user.username !== ADMIN_USERNAME) {
+      return res.status(403).json({ error: "관리자만 파일을 업로드할 수 있습니다" });
+    }
+    
+    upload.array('files', 10)(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: "파일 크기가 50MB를 초과합니다" });
+        }
+        return res.status(400).json({ error: err.message });
+      } else if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      
+      try {
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+          return res.status(400).json({ error: "파일이 업로드되지 않았습니다" });
+        }
+        const uploadedFiles = files.map(file => ({
+          name: Buffer.from(file.originalname, 'latin1').toString('utf8'),
+          url: `/uploads/${file.filename}`,
+          size: file.size,
+          type: path.extname(file.originalname).slice(1)
+        }));
+        res.json({ files: uploadedFiles });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+  });
 
   app.get("/api/users", async (req, res) => {
     const users = await storage.getUsers();
@@ -37,7 +133,26 @@ export async function registerRoutes(
     if (!user || user.password !== password) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+    req.session.user = { id: user.id, username: user.username };
     res.json({ ...user, password: undefined });
+  });
+
+  app.post("/api/users/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "로그아웃 실패" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/users/me", (req, res) => {
+    if (req.session.user) {
+      res.json(req.session.user);
+    } else {
+      res.status(401).json({ error: "Not authenticated" });
+    }
   });
 
   app.patch("/api/users/:id/password", async (req, res) => {

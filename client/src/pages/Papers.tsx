@@ -35,6 +35,7 @@ interface FileAttachment {
   type: string;
   size: number;
   url: string;
+  file?: File;
 }
 
 type CategoryKey = "domestic-conference" | "international-conference" | "domestic-journal" | "international-journal" | "main-journal" | "paper-review";
@@ -119,6 +120,7 @@ export default function Papers() {
         type: file.name.split('.').pop() || '',
         size: file.size,
         url: URL.createObjectURL(file),
+        file: file,
       }));
       setFormData({ ...formData, files: [...formData.files, ...newFiles] });
     }
@@ -170,7 +172,11 @@ export default function Papers() {
       volume: paper.volume || "",
       year: paper.year,
       websiteUrl: paper.websiteUrl || "",
-      files: paper.files.map(name => ({ name, type: name.split('.').pop() || '', size: 0, url: '' })),
+      files: paper.files.map(fileStr => {
+        const isUrl = fileStr.startsWith('/uploads/');
+        const name = isUrl ? fileStr.split('/').pop()?.replace(/^\d+-\d+-/, '') || fileStr : fileStr;
+        return { name, type: name.split('.').pop() || '', size: 0, url: isUrl ? fileStr : '' };
+      }),
     });
     setIsEditOpen(true);
   };
@@ -190,6 +196,17 @@ export default function Papers() {
 
   const handleAdd = async () => {
     try {
+      const newFiles = formData.files.filter(f => f.file);
+      let uploadedUrls: string[] = [];
+      
+      if (newFiles.length > 0) {
+        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+        uploadedUrls = uploaded.map(u => u.url);
+      }
+      
+      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
+      const allFileUrls = [...existingUrls, ...uploadedUrls];
+      
       await api.papers.create({
         category,
         title: formData.title,
@@ -202,7 +219,7 @@ export default function Papers() {
         year: formData.year,
         abstract: null,
         keywords: [],
-        files: formData.files.map(f => f.name),
+        files: allFileUrls,
         websiteUrl: formData.websiteUrl || null,
         date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
         views: 0,
@@ -217,6 +234,17 @@ export default function Papers() {
   const handleEdit = async () => {
     if (!editingPaper) return;
     try {
+      const newFiles = formData.files.filter(f => f.file);
+      let uploadedUrls: string[] = [];
+      
+      if (newFiles.length > 0) {
+        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+        uploadedUrls = uploaded.map(u => u.url);
+      }
+      
+      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
+      const allFileUrls = [...existingUrls, ...uploadedUrls];
+      
       await api.papers.update(editingPaper.id, {
         title: formData.title,
         authors: formData.authors,
@@ -227,7 +255,7 @@ export default function Papers() {
         volume: formData.volume || null,
         year: formData.year,
         websiteUrl: formData.websiteUrl || null,
-        files: formData.files.map(f => f.name),
+        files: allFileUrls,
       });
       await loadPapers();
       setIsEditOpen(false);
@@ -417,12 +445,21 @@ export default function Papers() {
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
                 <div className="space-y-2">
-                  {viewingPaper.files.map((fileName, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(fileName.split('.').pop() || '')}</span><span className="text-sm font-medium text-gray-700">{fileName}</span></div>
-                      <Button variant="ghost" size="sm" className="text-primary h-8"><Download className="w-4 h-4 mr-1" />다운로드</Button>
-                    </div>
-                  ))}
+                  {viewingPaper.files.map((fileStr, index) => {
+                    const isUrl = fileStr.startsWith('/uploads/');
+                    const displayName = isUrl ? decodeURIComponent(fileStr.split('/').pop()?.replace(/^\d+-\d+-/, '') || fileStr) : fileStr;
+                    const downloadUrl = isUrl ? fileStr : '';
+                    return (
+                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(displayName.split('.').pop() || '')}</span><span className="text-sm font-medium text-gray-700">{displayName}</span></div>
+                        {downloadUrl ? (
+                          <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors"><Download className="w-4 h-4" />다운로드</a>
+                        ) : (
+                          <span className="text-sm text-gray-400">다운로드 불가</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

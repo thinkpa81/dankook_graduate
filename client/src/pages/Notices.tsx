@@ -35,6 +35,7 @@ interface FileAttachment {
   type: string;
   size: number;
   url: string;
+  file?: File;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -101,6 +102,7 @@ export default function Notices() {
         type: file.name.split('.').pop() || '',
         size: file.size,
         url: URL.createObjectURL(file),
+        file: file,
       }));
       setFormData({ ...formData, files: [...formData.files, ...newFiles] });
     }
@@ -142,13 +144,24 @@ export default function Notices() {
     }
     setSaving(true);
     try {
+      const newFiles = formData.files.filter(f => f.file);
+      let uploadedUrls: string[] = [];
+      
+      if (newFiles.length > 0) {
+        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+        uploadedUrls = uploaded.map(u => u.url);
+      }
+      
+      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
+      const allFileUrls = [...existingUrls, ...uploadedUrls];
+      
       await api.notices.create({
         title: formData.title,
         content: formData.content,
         date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
         views: 0,
         isImportant: formData.isImportant,
-        files: formData.files.map(f => f.name),
+        files: allFileUrls,
       });
       await loadNotices();
       setIsAddOpen(false);
@@ -165,11 +178,22 @@ export default function Notices() {
     if (!editingNotice) return;
     setSaving(true);
     try {
+      const newFiles = formData.files.filter(f => f.file);
+      let uploadedUrls: string[] = [];
+      
+      if (newFiles.length > 0) {
+        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+        uploadedUrls = uploaded.map(u => u.url);
+      }
+      
+      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
+      const allFileUrls = [...existingUrls, ...uploadedUrls];
+      
       await api.notices.update(editingNotice.id, {
         title: formData.title,
         content: formData.content,
         isImportant: formData.isImportant,
-        files: formData.files.map(f => f.name),
+        files: allFileUrls,
       });
       await loadNotices();
       setIsEditOpen(false);
@@ -202,7 +226,11 @@ export default function Notices() {
       title: notice.title,
       content: notice.content,
       isImportant: notice.isImportant,
-      files: notice.files.map(name => ({ name, type: name.split('.').pop() || '', size: 0, url: '' })),
+      files: notice.files.map(fileStr => {
+        const isUrl = fileStr.startsWith('/uploads/');
+        const name = isUrl ? fileStr.split('/').pop()?.replace(/^\d+-\d+-/, '') || fileStr : fileStr;
+        return { name, type: name.split('.').pop() || '', size: 0, url: isUrl ? fileStr : '' };
+      }),
     });
     setIsEditOpen(true);
   };
@@ -383,17 +411,26 @@ export default function Notices() {
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
                 <div className="space-y-2">
-                  {viewingNotice.files.map((fileName, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{getFileIcon(fileName.split('.').pop() || '')}</span>
-                        <span className="text-sm font-medium text-gray-700">{fileName}</span>
+                  {viewingNotice.files.map((fileStr, index) => {
+                    const isUrl = fileStr.startsWith('/uploads/');
+                    const displayName = isUrl ? decodeURIComponent(fileStr.split('/').pop()?.replace(/^\d+-\d+-/, '') || fileStr) : fileStr;
+                    const downloadUrl = isUrl ? fileStr : '';
+                    return (
+                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{getFileIcon(displayName.split('.').pop() || '')}</span>
+                          <span className="text-sm font-medium text-gray-700">{displayName}</span>
+                        </div>
+                        {downloadUrl ? (
+                          <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors">
+                            <Download className="w-4 h-4" />다운로드
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-400">다운로드 불가</span>
+                        )}
                       </div>
-                      <Button variant="ghost" size="sm" className="text-primary h-8">
-                        <Download className="w-4 h-4 mr-1" />다운로드
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

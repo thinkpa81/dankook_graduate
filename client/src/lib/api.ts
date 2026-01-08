@@ -95,13 +95,75 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface UploadedFile {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+}
+
+async function uploadFiles(files: File[]): Promise<UploadedFile[]> {
+  const formData = new FormData();
+  files.forEach(file => formData.append('files', file));
+  
+  const res = await fetch(`${API_BASE}/upload`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  
+  if (!res.ok) {
+    let errorMessage = '파일 업로드에 실패했습니다';
+    try {
+      const json = await res.json();
+      errorMessage = json.error || errorMessage;
+    } catch (e) {}
+    throw new Error(errorMessage);
+  }
+  
+  const data = await res.json();
+  return data.files;
+}
+
+async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/users/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+}
+
+async function checkSession(): Promise<{ id: number; username: string } | null> {
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, {
+      credentials: 'include',
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const api = {
+  uploadFiles,
+  logout,
+  checkSession,
   users: {
     list: () => fetchApi<User[]>("/users"),
     create: (data: { username: string; password: string; name: string; email: string; registeredAt: string; registeredTime: string }) =>
       fetchApi<User>("/users", { method: "POST", body: JSON.stringify(data) }),
-    login: (username: string, password: string) =>
-      fetchApi<User>("/users/login", { method: "POST", body: JSON.stringify({ username, password }) }),
+    login: async (username: string, password: string) => {
+      const res = await fetch(`${API_BASE}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error("로그인 실패");
+      return res.json() as Promise<User>;
+    },
     resetPassword: (id: number, password: string) =>
       fetchApi<{ success: boolean }>(`/users/${id}/password`, { method: "PATCH", body: JSON.stringify({ password }) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/users/${id}`, { method: "DELETE" }),
