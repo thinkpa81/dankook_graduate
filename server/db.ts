@@ -4,18 +4,34 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const pool = new Pool({ 
+// Use individual PG* environment variables for more reliable connection
+// DATABASE_URL may contain internal hostnames that don't resolve in production
+const poolConfig: pg.PoolConfig = process.env.PGHOST && process.env.PGPORT ? {
+  host: process.env.PGHOST,
+  port: parseInt(process.env.PGPORT),
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+} : {
   connectionString: process.env.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-});
+};
+
+if (!process.env.DATABASE_URL && !process.env.PGHOST) {
+  throw new Error(
+    "DATABASE_URL or PGHOST must be set. Did you forget to provision a database?",
+  );
+}
+
+console.log(`Database connecting to: ${process.env.PGHOST || 'via DATABASE_URL'}`);
+
+export const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('Unexpected database pool error:', err);
