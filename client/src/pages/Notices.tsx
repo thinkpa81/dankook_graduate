@@ -78,6 +78,7 @@ export default function Notices() {
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [commentAuthor, setCommentAuthor] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -201,10 +202,10 @@ export default function Notices() {
   };
 
   const addComment = () => {
-    if (!viewingNotice || !newComment.trim()) return;
+    if (!viewingNotice || !newComment.trim() || !commentAuthor.trim()) return;
     const comment: Comment = {
       id: Date.now(),
-      author: "익명",
+      author: commentAuthor,
       content: newComment,
       date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
     };
@@ -215,6 +216,7 @@ export default function Notices() {
     ));
     setViewingNotice({ ...viewingNotice, comments: [...viewingNotice.comments, comment] });
     setNewComment("");
+    setCommentAuthor("");
   };
 
   return (
@@ -437,24 +439,33 @@ export default function Notices() {
               {viewingNotice?.comments.map((comment) => (
                 <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{comment.author}</span>
+                    <span className="font-bold text-sm">{comment.author}</span>
                     <span className="text-xs text-gray-400">{comment.date}</span>
                   </div>
                   <p className="text-sm text-gray-600">{comment.content}</p>
                 </div>
               ))}
 
-              <div className="flex gap-2 mt-4">
+              <div className="space-y-2 mt-4">
                 <Input
-                  placeholder="댓글을 입력하세요..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="h-11 rounded-lg text-base"
-                  data-testid="input-comment"
+                  placeholder="이름을 입력하세요"
+                  value={commentAuthor}
+                  onChange={(e) => setCommentAuthor(e.target.value)}
+                  className="h-10 rounded-lg text-base"
+                  data-testid="input-comment-author"
                 />
-                <Button onClick={addComment} className="rounded-lg px-4 h-11" data-testid="button-add-comment">
-                  <Send className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="댓글을 입력하세요..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="h-11 rounded-lg text-base"
+                    data-testid="input-comment"
+                  />
+                  <Button onClick={addComment} className="rounded-lg px-4 h-11" data-testid="button-add-comment">
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

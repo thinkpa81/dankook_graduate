@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, ChevronDown, User, LogIn } from "lucide-react";
+import { Menu, ChevronDown, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import dkuLogo from "@assets/image_1767877726952.png";
 
 interface HeaderProps {
   onLoginClick: () => void;
+  onSignupClick?: () => void;
 }
 
 const navItems = [
@@ -27,15 +28,24 @@ const navItems = [
       { title: "국내 저널", href: "/papers/domestic-journal" },
       { title: "해외 저널", href: "/papers/international-journal" },
       { title: "본 저널", href: "/papers/main-journal" },
+      { title: "논문리뷰", href: "/papers/paper-review" },
     ]
   },
   { title: "학과 내규", href: "/regulations" },
   { title: "인재풀 등록", href: "/talent-pool" },
 ];
 
-export default function Header({ onLoginClick }: HeaderProps) {
+export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleSignupClick = () => {
+    if (onSignupClick) {
+      onSignupClick();
+    } else {
+      onLoginClick();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
@@ -63,7 +73,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
-                      className={`font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ${location.startsWith(item.href) ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
+                      className={`font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 text-base ${location.startsWith(item.href) ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
                       data-testid={`nav-${item.title}`}
                     >
                       {item.title}
@@ -89,7 +99,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
                   key={item.title}
                   variant="ghost" 
                   asChild
-                  className={`font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ${location === item.href ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
+                  className={`font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 text-base ${location === item.href ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
                 >
                   <Link href={item.href} data-testid={`nav-${item.title}`}>
                     {item.title}
@@ -99,23 +109,23 @@ export default function Header({ onLoginClick }: HeaderProps) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleSignupClick}
+              className="hidden sm:flex font-semibold px-5 rounded-lg h-10 text-base"
+              data-testid="button-signup"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              가입하기
+            </Button>
             <Button 
               onClick={onLoginClick}
-              className="hidden sm:flex font-semibold px-6 rounded-lg bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-md hover:shadow-lg transition-all duration-300"
+              className="hidden sm:flex font-semibold px-6 rounded-lg bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-md hover:shadow-lg transition-all duration-300 h-10 text-base"
               data-testid="button-login"
             >
               <LogIn className="w-4 h-4 mr-2" />
               로그인
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onLoginClick}
-              className="sm:hidden rounded-lg"
-              data-testid="button-login-mobile"
-            >
-              <User className="w-5 h-5" />
             </Button>
 
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -138,7 +148,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
                       >
                         <Button 
                           variant="ghost" 
-                          className={`w-full justify-start font-medium text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/5' : ''}`}
+                          className={`w-full justify-start font-semibold text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/5' : ''}`}
                         >
                           {item.title}
                         </Button>
@@ -165,6 +175,29 @@ export default function Header({ onLoginClick }: HeaderProps) {
                       )}
                     </div>
                   ))}
+                </div>
+                <div className="mt-6 pt-6 border-t space-y-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      handleSignupClick();
+                    }}
+                    className="w-full font-semibold rounded-lg h-11 text-base"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    가입하기
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setMobileOpen(false);
+                      onLoginClick();
+                    }}
+                    className="w-full font-semibold rounded-lg bg-gradient-to-r from-primary to-blue-600 h-11 text-base"
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    로그인
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
