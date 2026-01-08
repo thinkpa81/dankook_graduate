@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, BookOpen, Target, Award, ExternalLink, Database, Brain, Globe, User, MapPin, Building } from "lucide-react";
+import { GraduationCap, BookOpen, Award, ExternalLink, Database, Brain, Globe, User, MapPin, Building } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import dkuLogo from "@assets/image_1767877726952.png";
 
 const curriculum = {
   common: [
@@ -56,8 +55,8 @@ export default function About() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">DEPARTMENT INTRODUCTION</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">학과 소개</h1>
+            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">DEPARTMENT INTRODUCTION</p>
+            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">학과 소개</h1>
             <p className="text-blue-100 max-w-2xl text-lg">
               데이터지식서비스공학과는 데이터 분석 기반의 융합 연구를 통해 
               미래를 선도하는 전문 인재를 양성합니다.
@@ -86,7 +85,7 @@ export default function About() {
                         <h2 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1">
                           데이터지식서비스공학과
                         </h2>
-                        <p className="text-primary font-semibold">
+                        <p className="text-primary font-semibold text-base">
                           Department of Data and Knowledge Service Engineering
                         </p>
                       </div>
@@ -107,7 +106,7 @@ export default function About() {
                       {coreCourses.map((course, index) => (
                         <div 
                           key={index}
-                          className="p-3 bg-white rounded-lg shadow-sm border border-amber-100 text-center font-medium text-gray-800 text-sm"
+                          className="p-3 bg-white rounded-lg shadow-sm border border-amber-100 text-center font-bold text-gray-800 text-base"
                         >
                           {course}
                         </div>
@@ -129,8 +128,8 @@ export default function About() {
             viewport={{ once: true }}
             className="text-center mb-10"
           >
-            <p className="text-primary font-semibold text-sm mb-1">PROGRAMS</p>
-            <h2 className="text-2xl lg:text-3xl font-black text-gray-900">
+            <p className="text-primary font-semibold text-base mb-1">PROGRAMS</p>
+            <h2 className="text-3xl lg:text-4xl font-black text-gray-900">
               전공 소개
             </h2>
           </motion.div>
@@ -148,10 +147,10 @@ export default function About() {
                     <Database className="w-7 h-7 text-white" />
                   </div>
                   <CardTitle className="text-xl font-bold text-gray-900">데이터사이언스</CardTitle>
-                  <p className="text-primary font-medium text-sm">Data Science</p>
+                  <p className="text-primary font-medium text-base">Data Science</p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 leading-relaxed text-sm">
+                  <p className="text-gray-600 leading-relaxed text-base">
                     데이터사이언스전공은 데이터의 분석과 처리 기술을 겸비한 데이터 과학자의 
                     육성을 목표로 관련 학문 분야의 이론적 지식과 실무를 습득할 수 있도록 
                     '데이터 기반의 인사이트와 가치'를 창출하는 미래 지향적인 교육과정을 운영합니다.
@@ -172,10 +171,10 @@ export default function About() {
                     <Globe className="w-7 h-7 text-white" />
                   </div>
                   <CardTitle className="text-xl font-bold text-gray-900">메타버스융합</CardTitle>
-                  <p className="text-primary font-medium text-sm">Metaverse Convergence</p>
+                  <p className="text-primary font-medium text-base">Metaverse Convergence</p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 leading-relaxed text-sm">
+                  <p className="text-gray-600 leading-relaxed text-base">
                     메타버스융합 전공은 가상현실, 증강현실, 혼합현실 등 확장현실(XR) 기술과 
                     다양한 산업 분야의 융합을 통해 미래 메타버스 시대를 이끌어갈 
                     전문 인재를 양성하는 것을 목표로 합니다.
@@ -195,21 +194,21 @@ export default function About() {
             viewport={{ once: true }}
             className="text-center mb-10"
           >
-            <p className="text-primary font-semibold text-sm mb-1">CURRICULUM</p>
-            <h2 className="text-2xl lg:text-3xl font-black text-gray-900">
+            <p className="text-primary font-semibold text-base mb-1">CURRICULUM</p>
+            <h2 className="text-3xl lg:text-4xl font-black text-gray-900">
               교과과정
             </h2>
           </motion.div>
 
           <Tabs defaultValue="common" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6 h-auto p-1 bg-gray-100 rounded-xl">
-              <TabsTrigger value="common" className="rounded-lg py-2.5 font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-common">
+            <TabsList className="grid w-full grid-cols-3 mb-6 h-14 p-1 bg-gray-100 rounded-xl">
+              <TabsTrigger value="common" className="rounded-lg py-3 font-bold text-base data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-common">
                 학과공통
               </TabsTrigger>
-              <TabsTrigger value="data" className="rounded-lg py-2.5 font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-data">
+              <TabsTrigger value="data" className="rounded-lg py-3 font-bold text-base data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-data">
                 데이터사이언스
               </TabsTrigger>
-              <TabsTrigger value="metaverse" className="rounded-lg py-2.5 font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-metaverse">
+              <TabsTrigger value="metaverse" className="rounded-lg py-3 font-bold text-base data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-metaverse">
                 메타버스융합
               </TabsTrigger>
             </TabsList>
@@ -221,7 +220,7 @@ export default function About() {
                     {curriculum.common.map((course, index) => (
                       <div 
                         key={index} 
-                        className="p-3 bg-blue-50 rounded-lg text-sm font-medium text-gray-700 border border-blue-100"
+                        className="p-3 bg-blue-50 rounded-lg text-base font-medium text-gray-700 border border-blue-100"
                       >
                         {course}
                       </div>
@@ -238,7 +237,7 @@ export default function About() {
                     {curriculum.dataScience.map((course, index) => (
                       <div 
                         key={index} 
-                        className="p-3 bg-emerald-50 rounded-lg text-sm font-medium text-gray-700 border border-emerald-100"
+                        className="p-3 bg-emerald-50 rounded-lg text-base font-medium text-gray-700 border border-emerald-100"
                       >
                         {course}
                       </div>
@@ -255,7 +254,7 @@ export default function About() {
                     {curriculum.metaverse.map((course, index) => (
                       <div 
                         key={index} 
-                        className="p-3 bg-purple-50 rounded-lg text-sm font-medium text-gray-700 border border-purple-100"
+                        className="p-3 bg-purple-50 rounded-lg text-base font-medium text-gray-700 border border-purple-100"
                       >
                         {course}
                       </div>
@@ -276,8 +275,8 @@ export default function About() {
             viewport={{ once: true }}
             className="text-center mb-10"
           >
-            <p className="text-primary font-semibold text-sm mb-1">FACULTY</p>
-            <h2 className="text-2xl lg:text-3xl font-black text-gray-900 mb-6">
+            <p className="text-primary font-semibold text-base mb-1">FACULTY</p>
+            <h2 className="text-3xl lg:text-4xl font-black text-gray-900 mb-6">
               교수진
             </h2>
           </motion.div>
@@ -289,7 +288,7 @@ export default function About() {
                   <User className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-primary font-semibold mb-1">지도교수</p>
+                  <p className="text-sm text-primary font-semibold mb-1">지도교수</p>
                   <h3 className="text-xl font-bold text-gray-900">서응교</h3>
                   <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
                     <MapPin className="w-3.5 h-3.5" />
@@ -297,7 +296,7 @@ export default function About() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600 text-sm bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-600 text-base bg-gray-50 p-3 rounded-lg">
                 <Building className="w-4 h-4 text-gray-400" />
                 <span>소속: 대학원 데이터지식서비스공학과</span>
               </div>
@@ -307,7 +306,7 @@ export default function About() {
           <div className="text-center">
             <Button 
               size="lg" 
-              className="rounded-lg px-8 h-12 font-bold bg-gradient-to-r from-primary to-blue-600"
+              className="rounded-lg px-8 h-14 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
               asChild
             >
               <a 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, ChevronDown, ChevronUp, BookOpen, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, BookOpen, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -170,9 +170,9 @@ export default function Regulations() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">REGULATIONS</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">학과 내규</h1>
-            <p className="text-blue-100 max-w-2xl">
+            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">REGULATIONS</p>
+            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">학과 내규</h1>
+            <p className="text-blue-100 max-w-2xl text-lg">
               대학원 데이터지식서비스공학과 운영 내규
             </p>
           </motion.div>
@@ -190,10 +190,10 @@ export default function Regulations() {
                       <BookOpen className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900">
+                      <h2 className="text-xl font-bold text-gray-900">
                         대학원 데이터지식서비스공학과 운영 내규
                       </h2>
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-gray-500 text-base">
                         단국대학교 일반대학원 학칙 및 시행세칙에 따른 학과 운영 규정
                       </p>
                     </div>
@@ -201,7 +201,7 @@ export default function Regulations() {
                   <Button 
                     onClick={handleShowAll}
                     variant="outline"
-                    className="rounded-lg hidden sm:flex"
+                    className="rounded-lg hidden sm:flex h-11 text-base font-bold"
                     data-testid="button-show-all"
                   >
                     <Eye className="w-4 h-4 mr-2" />
@@ -213,7 +213,7 @@ export default function Regulations() {
             <Button 
               onClick={handleShowAll}
               variant="outline"
-              className="rounded-lg w-full mt-3 sm:hidden"
+              className="rounded-lg w-full mt-3 sm:hidden h-11 text-base font-bold"
               data-testid="button-show-all-mobile"
             >
               <Eye className="w-4 h-4 mr-2" />
@@ -243,10 +243,10 @@ export default function Regulations() {
                               {reg.icon}
                             </div>
                             <div>
-                              <CardTitle className="text-base font-bold text-gray-900" data-testid={`regulation-title-${reg.id}`}>
+                              <CardTitle className="text-lg font-bold text-gray-900" data-testid={`regulation-title-${reg.id}`}>
                                 {reg.title}
                               </CardTitle>
-                              <p className="text-sm text-gray-500 mt-0.5">
+                              <p className="text-base text-gray-500 mt-0.5">
                                 {reg.description}
                               </p>
                             </div>
@@ -264,7 +264,7 @@ export default function Regulations() {
                     <CollapsibleContent>
                       <CardContent className="pt-0 px-4 lg:px-5 pb-4 lg:pb-5">
                         <div className="border-t pt-4">
-                          <pre className="whitespace-pre-wrap text-sm text-gray-600 leading-relaxed font-sans bg-gray-50 p-4 rounded-lg">
+                          <pre className="whitespace-pre-wrap text-base text-gray-600 leading-relaxed font-sans bg-gray-50 p-4 rounded-lg">
                             {reg.content.trim()}
                           </pre>
                         </div>

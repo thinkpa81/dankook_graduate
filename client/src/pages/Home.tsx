@@ -19,7 +19,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import dkuLogo from "@assets/image_1767877726952.png";
 
 const notices = [
   { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", date: "2024.01.05", views: 234 },
@@ -70,14 +69,6 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="max-w-4xl"
           >
-            <div className="flex items-center gap-4 mb-8">
-              <img src={dkuLogo} alt="단국대학교" className="h-12 lg:h-14 w-auto brightness-0 invert" />
-              <div className="border-l-2 border-white/30 pl-4">
-                <p className="text-blue-300 text-sm font-medium tracking-wide">일반대학원</p>
-                <p className="text-white font-bold text-xl lg:text-2xl">데이터지식서비스공학과</p>
-              </div>
-            </div>
-            
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
               데이터 기반의<br />
               <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
@@ -122,7 +113,7 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <p className="text-primary font-semibold mb-2">PROGRAMS</p>
+            <p className="text-primary font-semibold mb-2 text-lg">PROGRAMS</p>
             <h2 className="text-3xl lg:text-4xl font-black text-gray-900">
               전공 분야
             </h2>
@@ -145,7 +136,7 @@ export default function Home() {
                     <h3 className="text-xl font-bold text-gray-900 mb-3">
                       {feature.title}
                     </h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-gray-600 leading-relaxed text-base">
                       {feature.description}
                     </p>
                   </CardContent>
@@ -192,7 +183,7 @@ export default function Home() {
                         }`}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate pr-4 group-hover:text-primary transition-colors">
+                          <p className="font-medium text-gray-900 truncate pr-4 group-hover:text-primary transition-colors text-base">
                             {notice.title}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
@@ -239,7 +230,7 @@ export default function Home() {
                         <div className={`w-14 h-14 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center mb-4 shadow-md group-hover:scale-110 transition-transform duration-300`}>
                           <item.icon className="w-7 h-7 text-white" />
                         </div>
-                        <span className="font-bold text-gray-900">{item.title}</span>
+                        <span className="font-bold text-gray-900 text-base">{item.title}</span>
                       </CardContent>
                     </Card>
                   </Link>

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +33,7 @@ interface FileAttachment {
   name: string;
   type: string;
   size: number;
+  url?: string;
 }
 
 interface Comment {
@@ -55,17 +55,22 @@ interface Notice {
 }
 
 const initialNotices: Notice[] = [
-  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true, comments: [] },
+  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.\n\n1. 제출 기간: 2024년 1월 8일 ~ 1월 20일\n2. 심사 기간: 2024년 1월 25일 ~ 2월 5일\n3. 최종 제출: 2024년 2월 10일까지\n\n자세한 사항은 첨부파일을 참고해주세요.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true, comments: [] },
   { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, files: [{ name: "수강신청안내.xlsx", type: "xlsx", size: 128000 }], isImportant: true, comments: [] },
   { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, files: [{ name: "장학금신청서.docx", type: "docx", size: 89000 }], isImportant: false, comments: [] },
   { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, files: [], isImportant: false, comments: [] },
   { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, files: [{ name: "모집요강.pptx", type: "pptx", size: 2450000 }], isImportant: false, comments: [] },
+  { id: 6, title: "학과 세미나 일정 안내", content: "2024년도 학과 세미나 일정입니다.", date: "2023.12.15", views: 98, files: [], isImportant: false, comments: [] },
+  { id: 7, title: "연구윤리 교육 이수 안내", content: "연구윤리 교육 이수 안내입니다.", date: "2023.12.10", views: 87, files: [], isImportant: false, comments: [] },
 ];
+
+const ITEMS_PER_PAGE = 5;
 
 export default function Notices() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>(initialNotices);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -84,6 +89,12 @@ export default function Notices() {
     notice.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredNotices.length / ITEMS_PER_PAGE);
+  const paginatedNotices = filteredNotices.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -91,6 +102,7 @@ export default function Notices() {
         name: file.name,
         type: file.name.split('.').pop() || '',
         size: file.size,
+        url: URL.createObjectURL(file),
       }));
       setFormData({ ...formData, files: [...formData.files, ...newFiles] });
     }
@@ -122,6 +134,13 @@ export default function Notices() {
       default:
         return '📎';
     }
+  };
+
+  const downloadFile = (file: FileAttachment) => {
+    const link = document.createElement('a');
+    link.href = file.url || '#';
+    link.download = file.name;
+    link.click();
   };
 
   const handleAdd = () => {
@@ -212,9 +231,9 @@ export default function Notices() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">NOTICES</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">공지사항</h1>
-            <p className="text-blue-100 max-w-2xl">
+            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">NOTICES</p>
+            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">공지사항</h1>
+            <p className="text-blue-100 max-w-2xl text-lg">
               학과의 주요 소식과 공지사항을 확인하세요.
             </p>
           </motion.div>
@@ -228,24 +247,24 @@ export default function Notices() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 placeholder="검색어를 입력하세요"
-                className="pl-12 h-12 rounded-lg border-gray-200 bg-white shadow-sm"
+                className="pl-12 h-12 rounded-lg border-gray-200 bg-white shadow-sm text-base"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 data-testid="input-search"
               />
             </div>
             <Button 
               onClick={openAdd} 
-              className="rounded-lg shadow-md font-semibold px-6 bg-gradient-to-r from-primary to-blue-600"
+              className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base"
               data-testid="button-add-notice"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               공지 등록
             </Button>
           </div>
 
           <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
-            <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 font-semibold text-sm text-gray-600 border-b">
+            <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 font-bold text-sm text-gray-600 border-b">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-6">제목</div>
               <div className="col-span-2 text-center">작성일</div>
@@ -255,11 +274,11 @@ export default function Notices() {
             </div>
             
             <CardContent className="p-0 bg-white">
-              {filteredNotices.map((notice, index) => (
+              {paginatedNotices.map((notice, index) => (
                 <div 
                   key={notice.id}
                   className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${
-                    index !== filteredNotices.length - 1 ? 'border-b border-gray-100' : ''
+                    index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''
                   }`}
                 >
                   <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">
@@ -270,7 +289,7 @@ export default function Notices() {
                       <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>
                     )}
                     <span 
-                      className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer"
+                      className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer text-base"
                       onClick={() => openView(notice)}
                       data-testid={`link-notice-${notice.id}`}
                     >
@@ -325,27 +344,52 @@ export default function Notices() {
               {filteredNotices.length === 0 && (
                 <div className="p-16 text-center text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                  <p>검색 결과가 없습니다.</p>
+                  <p className="text-base">검색 결과가 없습니다.</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button variant="outline" size="icon" disabled className="rounded-lg" data-testid="button-prev">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button className="rounded-lg w-10 h-10" data-testid="button-page-1">1</Button>
-            <Button variant="outline" className="rounded-lg w-10 h-10" data-testid="button-page-2">2</Button>
-            <Button variant="outline" size="icon" className="rounded-lg" data-testid="button-next">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="rounded-lg" 
+                data-testid="button-prev"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <Button 
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  className="rounded-lg w-10 h-10"
+                  onClick={() => setCurrentPage(page)}
+                  data-testid={`button-page-${page}`}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-lg" 
+                data-testid="button-next"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="sm:max-w-2xl rounded-xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl rounded-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold pr-8">{viewingNotice?.title}</DialogTitle>
             <div className="flex items-center gap-4 text-sm text-gray-500 pt-2">
@@ -355,12 +399,12 @@ export default function Notices() {
           </DialogHeader>
           <div className="space-y-6 mt-4">
             <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]">
-              <p className="text-gray-700 whitespace-pre-wrap">{viewingNotice?.content}</p>
+              <p className="text-gray-700 whitespace-pre-wrap text-base">{viewingNotice?.content}</p>
             </div>
 
             {viewingNotice?.files && viewingNotice.files.length > 0 && (
               <div className="space-y-2">
-                <Label className="font-semibold">첨부파일</Label>
+                <Label className="font-bold text-base">첨부파일</Label>
                 <div className="space-y-2">
                   {viewingNotice.files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -369,7 +413,12 @@ export default function Notices() {
                         <span className="text-sm font-medium text-gray-700">{file.name}</span>
                         <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-primary h-8">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-primary h-8"
+                        onClick={() => downloadFile(file)}
+                      >
                         <Download className="w-4 h-4 mr-1" />
                         다운로드
                       </Button>
@@ -380,7 +429,7 @@ export default function Notices() {
             )}
 
             <div className="border-t pt-6">
-              <Label className="font-semibold flex items-center gap-2 mb-4">
+              <Label className="font-bold flex items-center gap-2 mb-4 text-base">
                 <MessageSquare className="w-4 h-4" />
                 댓글 ({viewingNotice?.comments.length || 0})
               </Label>
@@ -400,10 +449,10 @@ export default function Notices() {
                   placeholder="댓글을 입력하세요..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="h-10 rounded-lg"
+                  className="h-11 rounded-lg text-base"
                   data-testid="input-comment"
                 />
-                <Button onClick={addComment} className="rounded-lg px-4" data-testid="button-add-comment">
+                <Button onClick={addComment} className="rounded-lg px-4 h-11" data-testid="button-add-comment">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -416,33 +465,33 @@ export default function Notices() {
         <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">공지사항 등록</DialogTitle>
-            <DialogDescription>새로운 공지사항을 작성합니다.</DialogDescription>
+            <DialogDescription className="text-base">새로운 공지사항을 작성합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="title" className="font-bold text-base">제목</Label>
               <Input
                 id="title"
                 placeholder="공지사항 제목을 입력하세요"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-11 rounded-lg"
+                className="h-12 rounded-lg text-base"
                 data-testid="input-notice-title"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
+              <Label htmlFor="content" className="font-bold text-base">내용</Label>
               <Textarea
                 id="content"
                 placeholder="공지사항 내용을 입력하세요"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[120px] rounded-lg"
+                className="min-h-[120px] rounded-lg text-base"
                 data-testid="textarea-notice-content"
               />
             </div>
             <div className="space-y-2">
-              <Label>첨부파일 (Word, Excel, PowerPoint, PDF)</Label>
+              <Label className="font-bold text-base">첨부파일 (Word, Excel, PowerPoint, PDF)</Label>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
                 <input
                   type="file"
@@ -488,13 +537,13 @@ export default function Notices() {
                 onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
                 data-testid="checkbox-important"
               />
-              <Label htmlFor="important" className="cursor-pointer">중요 공지로 등록</Label>
+              <Label htmlFor="important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-11">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-12 text-base">
                 취소
               </Button>
-              <Button onClick={handleAdd} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-submit-notice">
+              <Button onClick={handleAdd} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base" data-testid="button-submit-notice">
                 등록
               </Button>
             </div>
@@ -506,31 +555,31 @@ export default function Notices() {
         <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">공지사항 수정</DialogTitle>
-            <DialogDescription>공지사항을 수정합니다.</DialogDescription>
+            <DialogDescription className="text-base">공지사항을 수정합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title">제목</Label>
+              <Label htmlFor="edit-title" className="font-bold text-base">제목</Label>
               <Input
                 id="edit-title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-11 rounded-lg"
+                className="h-12 rounded-lg text-base"
                 data-testid="input-edit-title"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-content">내용</Label>
+              <Label htmlFor="edit-content" className="font-bold text-base">내용</Label>
               <Textarea
                 id="edit-content"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[120px] rounded-lg"
+                className="min-h-[120px] rounded-lg text-base"
                 data-testid="textarea-edit-content"
               />
             </div>
             <div className="space-y-2">
-              <Label>첨부파일</Label>
+              <Label className="font-bold text-base">첨부파일</Label>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
                 <input
                   type="file"
@@ -573,13 +622,13 @@ export default function Notices() {
                 checked={formData.isImportant}
                 onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
               />
-              <Label htmlFor="edit-important" className="cursor-pointer">중요 공지로 등록</Label>
+              <Label htmlFor="edit-important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-11">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-12 text-base">
                 취소
               </Button>
-              <Button onClick={handleEdit} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-update-notice">
+              <Button onClick={handleEdit} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base" data-testid="button-update-notice">
                 수정
               </Button>
             </div>
@@ -590,8 +639,8 @@ export default function Notices() {
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>공지사항을 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg">공지사항을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               이 작업은 되돌릴 수 없습니다. 공지사항이 영구적으로 삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
