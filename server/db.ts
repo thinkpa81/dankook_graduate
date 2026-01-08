@@ -10,11 +10,37 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+});
+
 export const db = drizzle(pool, { schema });
 
+async function connectWithRetry(retries = 3, delay = 2000): Promise<pg.PoolClient> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await pool.connect();
+    } catch (err: any) {
+      console.error(`Database connection attempt ${i + 1} failed:`, err.message);
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error("Failed to connect to database");
+}
+
 export async function ensureTablesExist() {
-  const client = await pool.connect();
+  const client = await connectWithRetry();
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
