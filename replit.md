@@ -36,7 +36,10 @@ The server follows a layered architecture:
 - `server/db.ts`: Database connection pool and Drizzle client configuration
 
 ### Data Storage
-- **Database**: PostgreSQL (configured via DATABASE_URL environment variable)
+- **Database**: PostgreSQL via Neon (external cloud database)
+  - Production and development use the same Neon database via `NEON_DATABASE_URL` environment variable
+  - Falls back to Replit's internal `DATABASE_URL` if `NEON_DATABASE_URL` is not set
+  - Memory storage fallback if no database is available
 - **ORM**: Drizzle ORM with schema defined in `shared/schema.ts`
 - **Schema includes**:
   - `users`: User accounts with authentication credentials
