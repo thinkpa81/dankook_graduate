@@ -78,8 +78,19 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || "Request failed");
+    let errorMessage = `서버 오류 (${res.status})`;
+    try {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.error || json.message || errorMessage;
+      } catch {
+        if (text) errorMessage = text.substring(0, 200);
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMessage);
   }
   return res.json();
 }

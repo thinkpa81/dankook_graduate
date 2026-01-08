@@ -53,12 +53,17 @@ export async function registerRoutes(
   });
 
   app.get("/api/notices", async (req, res) => {
-    const noticesList = await storage.getNotices();
-    const result = await Promise.all(noticesList.map(async (n) => {
-      const comments = await storage.getNoticeComments(n.id);
-      return { ...n, comments };
-    }));
-    res.json(result);
+    try {
+      const noticesList = await storage.getNotices();
+      const result = await Promise.all(noticesList.map(async (n) => {
+        const comments = await storage.getNoticeComments(n.id);
+        return { ...n, comments };
+      }));
+      res.json(result);
+    } catch (e: any) {
+      console.error("GET /api/notices error:", e);
+      res.status(500).json({ error: e.message || "Database error" });
+    }
   });
 
   app.get("/api/notices/:id", async (req, res) => {
@@ -75,7 +80,8 @@ export async function registerRoutes(
       const notice = await storage.createNotice(parsed);
       res.json({ ...notice, comments: [] });
     } catch (e: any) {
-      res.status(400).json({ error: e.message });
+      console.error("POST /api/notices error:", e);
+      res.status(400).json({ error: e.message || "공지사항 등록에 실패했습니다" });
     }
   });
 
