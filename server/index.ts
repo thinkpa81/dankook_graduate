@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { ensureTablesExist } from "./db";
+import { initializeStorage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,11 +61,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Ensure database tables exist before starting
+  // Initialize storage (database or memory fallback)
   try {
-    await ensureTablesExist();
+    await initializeStorage();
   } catch (error) {
-    console.error("Failed to initialize database tables:", error);
+    console.error("Failed to initialize storage:", error);
   }
 
   await registerRoutes(httpServer, app);

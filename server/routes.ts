@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { getStorage } from "./storage";
 import { 
   insertUserSchema, insertNoticeSchema, insertPaperSchema, 
   insertTalentSchema, insertNoticeCommentSchema, insertPaperCommentSchema 
@@ -10,6 +10,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const storage = getStorage();
 
   app.get("/api/users", async (req, res) => {
     const users = await storage.getUsers();
