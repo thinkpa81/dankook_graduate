@@ -426,7 +426,7 @@ export default function Notices() {
                             <Download className="w-4 h-4" />다운로드
                           </a>
                         ) : (
-                          <span className="text-sm text-gray-400">다운로드 불가</span>
+                          <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
                       </div>
                     );

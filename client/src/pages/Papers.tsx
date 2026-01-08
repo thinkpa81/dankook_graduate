@@ -455,7 +455,7 @@ export default function Papers() {
                         {downloadUrl ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors"><Download className="w-4 h-4" />다운로드</a>
                         ) : (
-                          <span className="text-sm text-gray-400">다운로드 불가</span>
+                          <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
                       </div>
                     );
@@ -547,7 +547,7 @@ export default function Papers() {
                 <input type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" onChange={handleFileChange} className="hidden" id="paper-file-upload-edit" />
                 <label htmlFor="paper-file-upload-edit" className="cursor-pointer flex flex-col items-center gap-2"><Upload className="w-8 h-8 text-gray-400" /><span className="text-sm text-gray-500">클릭하여 파일 업로드</span></label>
               </div>
-              {formData.files.length > 0 && <div className="space-y-2 mt-3">{formData.files.map((file, index) => <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(file.type)}</span><span className="text-sm font-medium">{file.name}</span></div><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button></div>)}</div>}
+              {formData.files.length > 0 && <div className="space-y-2 mt-3">{formData.files.map((file, index) => <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${file.file ? 'bg-blue-50 border border-blue-200' : file.url ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'}`}><div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(file.type)}</span><span className="text-sm font-medium">{file.name}</span>{!file.url && !file.file && <span className="text-xs text-orange-600 ml-2">(재업로드 필요)</span>}{file.file && <span className="text-xs text-blue-600 ml-2">(새 파일)</span>}</div><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button></div>)}</div>}
             </div>
             <div className="flex gap-3 pt-4"><Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-11 text-base">취소</Button><Button onClick={handleEdit} className="flex-1 rounded-lg h-11 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">수정</Button></div>
           </div>
