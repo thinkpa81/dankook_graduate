@@ -29,6 +29,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 import { api, Paper, PaperComment } from "@/lib/api";
+import { toast } from "sonner";
 
 interface FileAttachment {
   name: string;
@@ -200,8 +201,13 @@ export default function Papers() {
       let uploadedUrls: string[] = [];
       
       if (newFiles.length > 0) {
-        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
-        uploadedUrls = uploaded.map(u => u.url);
+        try {
+          const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+          uploadedUrls = uploaded.map(u => u.url);
+        } catch (uploadError: any) {
+          toast.error(uploadError.message || "파일 업로드에 실패했습니다. 로그인 후 다시 시도해주세요.");
+          return;
+        }
       }
       
       const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
@@ -226,8 +232,10 @@ export default function Papers() {
       });
       await loadPapers();
       setIsAddOpen(false);
-    } catch (e) {
+      toast.success("논문이 등록되었습니다.");
+    } catch (e: any) {
       console.error("Failed to add paper", e);
+      toast.error(e.message || "논문 등록에 실패했습니다.");
     }
   };
 
@@ -238,8 +246,13 @@ export default function Papers() {
       let uploadedUrls: string[] = [];
       
       if (newFiles.length > 0) {
-        const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
-        uploadedUrls = uploaded.map(u => u.url);
+        try {
+          const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
+          uploadedUrls = uploaded.map(u => u.url);
+        } catch (uploadError: any) {
+          toast.error(uploadError.message || "파일 업로드에 실패했습니다. 로그인 후 다시 시도해주세요.");
+          return;
+        }
       }
       
       const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
@@ -260,8 +273,10 @@ export default function Papers() {
       await loadPapers();
       setIsEditOpen(false);
       setEditingPaper(null);
-    } catch (e) {
+      toast.success("논문이 수정되었습니다.");
+    } catch (e: any) {
       console.error("Failed to edit paper", e);
+      toast.error(e.message || "논문 수정에 실패했습니다.");
     }
   };
 
