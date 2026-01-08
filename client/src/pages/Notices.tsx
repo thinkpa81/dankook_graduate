@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, File, X } from "lucide-react";
+import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,13 @@ interface FileAttachment {
   size: number;
 }
 
+interface Comment {
+  id: number;
+  author: string;
+  content: string;
+  date: string;
+}
+
 interface Notice {
   id: number;
   title: string;
@@ -44,14 +51,15 @@ interface Notice {
   views: number;
   files: FileAttachment[];
   isImportant: boolean;
+  comments: Comment[];
 }
 
 const initialNotices: Notice[] = [
-  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true },
-  { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, files: [{ name: "수강신청안내.xlsx", type: "xlsx", size: 128000 }], isImportant: true },
-  { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, files: [{ name: "장학금신청서.docx", type: "docx", size: 89000 }], isImportant: false },
-  { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, files: [], isImportant: false },
-  { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, files: [{ name: "모집요강.pptx", type: "pptx", size: 2450000 }], isImportant: false },
+  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true, comments: [] },
+  { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, files: [{ name: "수강신청안내.xlsx", type: "xlsx", size: 128000 }], isImportant: true, comments: [] },
+  { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, files: [{ name: "장학금신청서.docx", type: "docx", size: 89000 }], isImportant: false, comments: [] },
+  { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, files: [], isImportant: false, comments: [] },
+  { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, files: [{ name: "모집요강.pptx", type: "pptx", size: 2450000 }], isImportant: false, comments: [] },
 ];
 
 export default function Notices() {
@@ -60,8 +68,11 @@ export default function Notices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
+  const [newComment, setNewComment] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -106,6 +117,8 @@ export default function Notices() {
       case 'pptx':
       case 'ppt':
         return '📽️';
+      case 'pdf':
+        return '📕';
       default:
         return '📎';
     }
@@ -120,6 +133,7 @@ export default function Notices() {
       views: 0,
       files: formData.files,
       isImportant: formData.isImportant,
+      comments: [],
     };
     setNotices([newNotice, ...notices]);
     setIsAddOpen(false);
@@ -156,9 +170,32 @@ export default function Notices() {
     setIsEditOpen(true);
   };
 
+  const openView = (notice: Notice) => {
+    setViewingNotice(notice);
+    setNotices(notices.map(n => n.id === notice.id ? { ...n, views: n.views + 1 } : n));
+    setIsViewOpen(true);
+  };
+
   const openAdd = () => {
     setFormData({ title: "", content: "", isImportant: false, files: [] });
     setIsAddOpen(true);
+  };
+
+  const addComment = () => {
+    if (!viewingNotice || !newComment.trim()) return;
+    const comment: Comment = {
+      id: Date.now(),
+      author: "익명",
+      content: newComment,
+      date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+    };
+    setNotices(notices.map(n => 
+      n.id === viewingNotice.id 
+        ? { ...n, comments: [...n.comments, comment] }
+        : n
+    ));
+    setViewingNotice({ ...viewingNotice, comments: [...viewingNotice.comments, comment] });
+    setNewComment("");
   };
 
   return (
@@ -175,9 +212,9 @@ export default function Notices() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-blue-300 font-semibold mb-2">NOTICES</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4">공지사항</h1>
-            <p className="text-blue-100/80 max-w-2xl">
+            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">NOTICES</p>
+            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">공지사항</h1>
+            <p className="text-blue-100 max-w-2xl">
               학과의 주요 소식과 공지사항을 확인하세요.
             </p>
           </motion.div>
@@ -232,11 +269,19 @@ export default function Notices() {
                     {notice.isImportant && (
                       <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>
                     )}
-                    <Link href={`/notices/${notice.id}`} data-testid={`link-notice-${notice.id}`}>
-                      <span className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer">
-                        {notice.title}
+                    <span 
+                      className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => openView(notice)}
+                      data-testid={`link-notice-${notice.id}`}
+                    >
+                      {notice.title}
+                    </span>
+                    {notice.comments.length > 0 && (
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <MessageSquare className="w-3 h-3" />
+                        {notice.comments.length}
                       </span>
-                    </Link>
+                    )}
                   </div>
                   <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500">
                     <Calendar className="w-4 h-4 mr-1.5 md:hidden" />
@@ -299,6 +344,74 @@ export default function Notices() {
         </div>
       </section>
 
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-2xl rounded-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold pr-8">{viewingNotice?.title}</DialogTitle>
+            <div className="flex items-center gap-4 text-sm text-gray-500 pt-2">
+              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{viewingNotice?.date}</span>
+              <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{viewingNotice?.views}</span>
+            </div>
+          </DialogHeader>
+          <div className="space-y-6 mt-4">
+            <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]">
+              <p className="text-gray-700 whitespace-pre-wrap">{viewingNotice?.content}</p>
+            </div>
+
+            {viewingNotice?.files && viewingNotice.files.length > 0 && (
+              <div className="space-y-2">
+                <Label className="font-semibold">첨부파일</Label>
+                <div className="space-y-2">
+                  {viewingNotice.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-primary h-8">
+                        <Download className="w-4 h-4 mr-1" />
+                        다운로드
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="border-t pt-6">
+              <Label className="font-semibold flex items-center gap-2 mb-4">
+                <MessageSquare className="w-4 h-4" />
+                댓글 ({viewingNotice?.comments.length || 0})
+              </Label>
+              
+              {viewingNotice?.comments.map((comment) => (
+                <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm">{comment.author}</span>
+                    <span className="text-xs text-gray-400">{comment.date}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{comment.content}</p>
+                </div>
+              ))}
+
+              <div className="flex gap-2 mt-4">
+                <Input
+                  placeholder="댓글을 입력하세요..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="h-10 rounded-lg"
+                  data-testid="input-comment"
+                />
+                <Button onClick={addComment} className="rounded-lg px-4" data-testid="button-add-comment">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
@@ -329,12 +442,12 @@ export default function Notices() {
               />
             </div>
             <div className="space-y-2">
-              <Label>첨부파일 (Word, Excel, PowerPoint)</Label>
+              <Label>첨부파일 (Word, Excel, PowerPoint, PDF)</Label>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
                 <input
                   type="file"
                   multiple
-                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -343,7 +456,7 @@ export default function Notices() {
                 <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
                   <Upload className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
-                  <span className="text-xs text-gray-400">.doc, .docx, .xls, .xlsx, .ppt, .pptx</span>
+                  <span className="text-xs text-gray-400">.doc, .docx, .xls, .xlsx, .ppt, .pptx, .pdf</span>
                 </label>
               </div>
               {formData.files.length > 0 && (
@@ -422,7 +535,7 @@ export default function Notices() {
                 <input
                   type="file"
                   multiple
-                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload-edit"

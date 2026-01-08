@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
 import { motion } from "framer-motion";
-import { FileText, Users, BookOpen, Plus, Pencil, Trash2, Upload, X } from "lucide-react";
+import { FileText, Users, BookOpen, Plus, Pencil, Trash2, Upload, X, MessageSquare, Send, Download, Eye, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,13 @@ interface FileAttachment {
   size: number;
 }
 
+interface Comment {
+  id: number;
+  author: string;
+  content: string;
+  date: string;
+}
+
 interface Paper {
   id: number;
   title: string;
@@ -44,28 +51,32 @@ interface Paper {
   year: string;
   volume?: string;
   files: FileAttachment[];
+  comments: Comment[];
 }
 
 const initialPapers: Record<string, Paper[]> = {
   "domestic-conference": [
-    { id: 1, title: "빅데이터 분석을 활용한 소비자 행동 예측 모델 연구", authors: "김철수, 이영희", venue: "한국정보과학회 학술대회", year: "2024", files: [{ name: "논문.pdf", type: "pdf", size: 245000 }] },
-    { id: 2, title: "자연어 처리 기반 감성 분석 시스템 개발", authors: "박지민, 최수진", venue: "한국데이터베이스학회 학술대회", year: "2023", files: [] },
-    { id: 3, title: "클라우드 컴퓨팅 환경에서의 데이터 보안 연구", authors: "정민수, 김하늘", venue: "한국정보보호학회 학술대회", year: "2023", files: [{ name: "발표자료.pptx", type: "pptx", size: 1250000 }] },
+    { id: 1, title: "빅데이터 분석을 활용한 소비자 행동 예측 모델 연구", authors: "김철수, 이영희", venue: "한국정보과학회 학술대회", year: "2024", files: [{ name: "논문.pdf", type: "pdf", size: 245000 }], comments: [] },
+    { id: 2, title: "자연어 처리 기반 감성 분석 시스템 개발", authors: "박지민, 최수진", venue: "한국데이터베이스학회 학술대회", year: "2023", files: [], comments: [] },
+    { id: 3, title: "클라우드 컴퓨팅 환경에서의 데이터 보안 연구", authors: "정민수, 김하늘", venue: "한국정보보호학회 학술대회", year: "2023", files: [{ name: "발표자료.pptx", type: "pptx", size: 1250000 }], comments: [] },
   ],
   "international-conference": [
-    { id: 1, title: "Deep Learning Approach for Time Series Prediction", authors: "Kim, J., Lee, H.", venue: "IEEE International Conference on Data Mining", year: "2024", files: [] },
-    { id: 2, title: "A Novel Framework for Knowledge Graph Construction", authors: "Park, S., Choi, M.", venue: "ACM SIGKDD Conference", year: "2023", files: [] },
+    { id: 1, title: "Deep Learning Approach for Time Series Prediction", authors: "Kim, J., Lee, H.", venue: "IEEE International Conference on Data Mining", year: "2024", files: [], comments: [] },
+    { id: 2, title: "A Novel Framework for Knowledge Graph Construction", authors: "Park, S., Choi, M.", venue: "ACM SIGKDD Conference", year: "2023", files: [], comments: [] },
   ],
   "domestic-journal": [
-    { id: 1, title: "인공지능 기반 의료 데이터 분석 플랫폼 설계", authors: "이민호, 김서연", journal: "한국정보과학회논문지", year: "2024", volume: "51(3)", files: [] },
-    { id: 2, title: "메타버스 환경에서의 사용자 경험 분석", authors: "정유진, 박현우", journal: "한국HCI학회논문지", year: "2023", volume: "18(4)", files: [] },
+    { id: 1, title: "인공지능 기반 의료 데이터 분석 플랫폼 설계", authors: "이민호, 김서연", journal: "한국정보과학회논문지", year: "2024", volume: "51(3)", files: [], comments: [] },
+    { id: 2, title: "메타버스 환경에서의 사용자 경험 분석", authors: "정유진, 박현우", journal: "한국HCI학회논문지", year: "2023", volume: "18(4)", files: [], comments: [] },
   ],
   "international-journal": [
-    { id: 1, title: "Machine Learning for Predictive Analytics in Healthcare", authors: "Kim, Y., Lee, J.", journal: "IEEE Transactions on Knowledge and Data Engineering", year: "2024", volume: "36(2)", files: [] },
-    { id: 2, title: "Efficient Data Mining Algorithms for Big Data Processing", authors: "Park, H., Choi, S.", journal: "ACM Computing Surveys", year: "2023", volume: "55(4)", files: [] },
+    { id: 1, title: "Machine Learning for Predictive Analytics in Healthcare", authors: "Kim, Y., Lee, J.", journal: "IEEE Transactions on Knowledge and Data Engineering", year: "2024", volume: "36(2)", files: [], comments: [] },
+    { id: 2, title: "Efficient Data Mining Algorithms for Big Data Processing", authors: "Park, H., Choi, S.", journal: "ACM Computing Surveys", year: "2023", volume: "55(4)", files: [], comments: [] },
   ],
   "main-journal": [
-    { id: 1, title: "데이터지식서비스공학과 연구 동향 분석", authors: "학과 연구팀", journal: "단국대학교 대학원 논문집", year: "2024", volume: "12(1)", files: [] },
+    { id: 1, title: "데이터지식서비스공학과 연구 동향 분석", authors: "학과 연구팀", journal: "단국대학교 대학원 논문집", year: "2024", volume: "12(1)", files: [], comments: [] },
+  ],
+  "paper-review": [
+    { id: 1, title: "최신 딥러닝 트렌드 리뷰", authors: "김철수", journal: "학과 세미나", year: "2024", volume: "", files: [], comments: [{ id: 1, author: "이영희", content: "좋은 리뷰 감사합니다!", date: "2024.01.05" }] },
   ]
 };
 
@@ -75,6 +86,7 @@ const categoryTitles: Record<string, string> = {
   "domestic-journal": "국내 저널",
   "international-journal": "해외 저널",
   "main-journal": "본 저널",
+  "paper-review": "논문리뷰",
 };
 
 const categoryColors: Record<string, string> = {
@@ -83,6 +95,7 @@ const categoryColors: Record<string, string> = {
   "domestic-journal": "from-emerald-500 to-teal-500",
   "international-journal": "from-orange-500 to-amber-500",
   "main-journal": "from-rose-500 to-pink-500",
+  "paper-review": "from-cyan-500 to-blue-500",
 };
 
 export default function Papers() {
@@ -92,8 +105,11 @@ export default function Papers() {
   const [papers, setPapers] = useState(initialPapers);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
+  const [viewingPaper, setViewingPaper] = useState<Paper | null>(null);
+  const [newComment, setNewComment] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     authors: "",
@@ -105,7 +121,7 @@ export default function Papers() {
   });
 
   const currentPapers = papers[category] || [];
-  const isJournal = category.includes("journal");
+  const isJournal = category.includes("journal") || category === "paper-review";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -154,6 +170,7 @@ export default function Papers() {
       authors: formData.authors,
       year: formData.year,
       files: formData.files,
+      comments: [],
       ...(isJournal ? { journal: formData.journal, volume: formData.volume } : { venue: formData.venue }),
     };
     setPapers({ ...papers, [category]: [newPaper, ...currentPapers] });
@@ -204,9 +221,34 @@ export default function Papers() {
     setIsEditOpen(true);
   };
 
+  const openView = (paper: Paper) => {
+    setViewingPaper(paper);
+    setIsViewOpen(true);
+  };
+
   const openAdd = () => {
     setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "", files: [] });
     setIsAddOpen(true);
+  };
+
+  const addComment = () => {
+    if (!viewingPaper || !newComment.trim()) return;
+    const comment: Comment = {
+      id: Date.now(),
+      author: "익명",
+      content: newComment,
+      date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+    };
+    setPapers({
+      ...papers,
+      [category]: currentPapers.map(p =>
+        p.id === viewingPaper.id
+          ? { ...p, comments: [...p.comments, comment] }
+          : p
+      ),
+    });
+    setViewingPaper({ ...viewingPaper, comments: [...viewingPaper.comments, comment] });
+    setNewComment("");
   };
 
   return (
@@ -223,9 +265,9 @@ export default function Papers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-blue-300 font-semibold mb-2">PAPERS & PUBLICATIONS</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4">논문</h1>
-            <p className="text-blue-100/80 max-w-2xl">
+            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">PAPERS & PUBLICATIONS</p>
+            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">논문</h1>
+            <p className="text-blue-100 max-w-2xl">
               학과의 연구 성과와 논문을 확인하세요.
             </p>
           </motion.div>
@@ -236,30 +278,35 @@ export default function Papers() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
             <Tabs value={category} className="w-full lg:w-auto">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1 bg-white shadow-md rounded-xl">
-                <TabsTrigger value="domestic-conference" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto p-1 bg-white shadow-md rounded-xl">
+                <TabsTrigger value="domestic-conference" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/domestic-conference" data-testid="tab-domestic-conf">
                     국내 학술대회
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="international-conference" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                <TabsTrigger value="international-conference" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/international-conference" data-testid="tab-intl-conf">
                     해외 학술대회
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="domestic-journal" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                <TabsTrigger value="domestic-journal" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/domestic-journal" data-testid="tab-domestic-journal">
                     국내 저널
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="international-journal" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                <TabsTrigger value="international-journal" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/international-journal" data-testid="tab-intl-journal">
                     해외 저널
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="main-journal" asChild className="rounded-lg py-2.5 text-sm col-span-2 lg:col-span-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                <TabsTrigger value="main-journal" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/main-journal" data-testid="tab-main-journal">
                     본 저널
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger value="paper-review" asChild className="rounded-lg py-2 text-xs lg:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                  <Link href="/papers/paper-review" data-testid="tab-paper-review">
+                    논문리뷰
                   </Link>
                 </TabsTrigger>
               </TabsList>
@@ -299,9 +346,20 @@ export default function Papers() {
                         <BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg text-gray-900 mb-2">
-                          {paper.title}
-                        </h3>
+                        <div className="flex items-start gap-2">
+                          <h3 
+                            className="font-bold text-lg text-gray-900 mb-2 cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => openView(paper)}
+                          >
+                            {paper.title}
+                          </h3>
+                          {paper.comments.length > 0 && (
+                            <span className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                              <MessageSquare className="w-3 h-3" />
+                              {paper.comments.length}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                           <span className="flex items-center gap-1.5">
                             <Users className="w-4 h-4" />
@@ -361,6 +419,79 @@ export default function Papers() {
           </motion.div>
         </div>
       </section>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-2xl rounded-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold pr-8">{viewingPaper?.title}</DialogTitle>
+            <div className="flex items-center gap-4 text-sm text-gray-500 pt-2">
+              <span className="flex items-center gap-1"><Users className="w-4 h-4" />{viewingPaper?.authors}</span>
+              <Badge className={`bg-gradient-to-r ${categoryColors[category]} text-white border-0`}>
+                {viewingPaper?.year}
+              </Badge>
+            </div>
+          </DialogHeader>
+          <div className="space-y-6 mt-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-700">
+                <strong>게재처:</strong> {viewingPaper?.venue || viewingPaper?.journal}
+                {viewingPaper?.volume && ` (${viewingPaper.volume})`}
+              </p>
+            </div>
+
+            {viewingPaper?.files && viewingPaper.files.length > 0 && (
+              <div className="space-y-2">
+                <Label className="font-semibold">첨부파일</Label>
+                <div className="space-y-2">
+                  {viewingPaper.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-primary h-8">
+                        <Download className="w-4 h-4 mr-1" />
+                        다운로드
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="border-t pt-6">
+              <Label className="font-semibold flex items-center gap-2 mb-4">
+                <MessageSquare className="w-4 h-4" />
+                댓글 ({viewingPaper?.comments.length || 0})
+              </Label>
+              
+              {viewingPaper?.comments.map((comment) => (
+                <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm">{comment.author}</span>
+                    <span className="text-xs text-gray-400">{comment.date}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{comment.content}</p>
+                </div>
+              ))}
+
+              <div className="flex gap-2 mt-4">
+                <Input
+                  placeholder="댓글을 입력하세요..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="h-10 rounded-lg"
+                  data-testid="input-paper-comment"
+                />
+                <Button onClick={addComment} className="rounded-lg px-4" data-testid="button-add-paper-comment">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-lg rounded-xl">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, GraduationCap, FileText, CheckCircle, Users, Eye, Calendar, Shield } from "lucide-react";
+import { User, Mail, Phone, GraduationCap, FileText, CheckCircle, Users, Calendar, Shield, Download, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
@@ -35,8 +42,11 @@ const initialTalentData: TalentEntry[] = [
 export default function TalentPool() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [talentData, setTalentData] = useState<TalentEntry[]>(initialTalentData);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminCredentials, setAdminCredentials] = useState({ id: "", password: "" });
+  const [loginError, setLoginError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -69,6 +79,33 @@ export default function TalentPool() {
     setSubmitted(true);
   };
 
+  const handleAdminLogin = () => {
+    if (adminCredentials.id === "thinkpa" && adminCredentials.password === "audghk99**") {
+      setIsAdminLoggedIn(true);
+      setShowAdminLogin(false);
+      setLoginError("");
+    } else {
+      setLoginError("아이디 또는 비밀번호가 올바르지 않습니다.");
+    }
+  };
+
+  const downloadExcel = () => {
+    let csvContent = "이름,이메일,연락처,학력,학부전공,관심전공,지원동기,등록일\n";
+    talentData.forEach(entry => {
+      csvContent += `${entry.name},${entry.email},${entry.phone},${entry.education},${entry.major},${entry.interestedMajor},"${entry.motivation}",${entry.registeredAt}\n`;
+    });
+    
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `인재풀_목록_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
@@ -83,9 +120,9 @@ export default function TalentPool() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-blue-300 font-semibold mb-2">TALENT POOL</p>
-            <h1 className="text-3xl lg:text-4xl font-black mb-4">인재풀 등록</h1>
-            <p className="text-blue-100/80 max-w-2xl">
+            <p className="text-cyan-400 font-semibold mb-2 text-sm tracking-wide">TALENT POOL</p>
+            <h1 className="text-3xl lg:text-4xl font-black mb-4 text-white">인재풀 등록</h1>
+            <p className="text-blue-100 max-w-2xl">
               진학에 관심 있는 분들의 정보를 등록해주세요. 
               입학 관련 정보를 받아보실 수 있습니다.
             </p>
@@ -101,7 +138,16 @@ export default function TalentPool() {
                 <Users className="w-4 h-4 mr-2" />
                 인재풀 등록
               </TabsTrigger>
-              <TabsTrigger value="admin" className="rounded-lg font-semibold" data-testid="tab-admin">
+              <TabsTrigger 
+                value="admin" 
+                className="rounded-lg font-semibold" 
+                data-testid="tab-admin"
+                onClick={() => {
+                  if (!isAdminLoggedIn) {
+                    setShowAdminLogin(true);
+                  }
+                }}
+              >
                 <Shield className="w-4 h-4 mr-2" />
                 관리자 보기
               </TabsTrigger>
@@ -316,80 +362,147 @@ export default function TalentPool() {
             </TabsContent>
 
             <TabsContent value="admin">
-              <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-                <CardHeader className="p-6 border-b bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                        <Shield className="w-5 h-5 text-white" />
+              {isAdminLoggedIn ? (
+                <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+                  <CardHeader className="p-6 border-b bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                          <Shield className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-bold">인재풀 관리</CardTitle>
+                          <CardDescription>
+                            등록된 인재풀 목록 (총 {talentData.length}명)
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-lg font-bold">인재풀 관리</CardTitle>
-                        <CardDescription>
-                          등록된 인재풀 목록 (총 {talentData.length}명)
-                        </CardDescription>
-                      </div>
+                      <Button 
+                        onClick={downloadExcel}
+                        className="rounded-lg bg-gradient-to-r from-emerald-500 to-green-600"
+                        data-testid="button-download-excel"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        엑셀 다운로드
+                      </Button>
                     </div>
-                    <Badge className="bg-gradient-to-r from-violet-500 to-purple-600 text-white border-0">
-                      관리자 전용
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">이름</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">이메일</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">연락처</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">학력</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">관심전공</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">등록일</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {talentData.map((entry) => (
-                          <tr key={entry.id} className="hover:bg-blue-50/50 transition-colors">
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-blue-500/20 rounded-full flex items-center justify-center">
-                                  <User className="w-4 h-4 text-primary" />
-                                </div>
-                                <span className="font-medium text-gray-900">{entry.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{entry.email}</td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{entry.phone}</td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{entry.education}</td>
-                            <td className="px-4 py-4">
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0">
-                                {entry.interestedMajor}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-500">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5" />
-                                {entry.registeredAt}
-                              </div>
-                            </td>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">이름</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">연락처</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">학력</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">관심전공</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">등록일</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {talentData.length === 0 && (
-                    <div className="p-12 text-center text-gray-500">
-                      <Users className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                      <p>등록된 인재풀이 없습니다.</p>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {talentData.map((entry) => (
+                            <tr key={entry.id} className="hover:bg-blue-50/50 transition-colors">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-blue-500/20 rounded-full flex items-center justify-center">
+                                    <User className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <span className="font-medium text-gray-900">{entry.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-600">{entry.email}</td>
+                              <td className="px-4 py-4 text-sm text-gray-600">{entry.phone}</td>
+                              <td className="px-4 py-4 text-sm text-gray-600">{entry.education}</td>
+                              <td className="px-4 py-4">
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0">
+                                  {entry.interestedMajor}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {entry.registeredAt}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Lock className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">관리자 로그인 필요</h3>
+                    <p className="text-gray-500 mb-6">이 페이지는 관리자만 접근할 수 있습니다.</p>
+                    <Button 
+                      onClick={() => setShowAdminLogin(true)}
+                      className="rounded-lg bg-gradient-to-r from-primary to-blue-600"
+                    >
+                      관리자 로그인
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </section>
+
+      <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+        <DialogContent className="sm:max-w-md rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              관리자 로그인
+            </DialogTitle>
+            <DialogDescription>
+              관리자 계정으로 로그인하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-id">아이디</Label>
+              <Input
+                id="admin-id"
+                placeholder="아이디를 입력하세요"
+                value={adminCredentials.id}
+                onChange={(e) => setAdminCredentials({ ...adminCredentials, id: e.target.value })}
+                className="h-11 rounded-lg"
+                data-testid="input-admin-id"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">비밀번호</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="비밀번호를 입력하세요"
+                value={adminCredentials.password}
+                onChange={(e) => setAdminCredentials({ ...adminCredentials, password: e.target.value })}
+                className="h-11 rounded-lg"
+                data-testid="input-admin-password"
+              />
+            </div>
+            {loginError && (
+              <p className="text-sm text-red-500">{loginError}</p>
+            )}
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setShowAdminLogin(false)} className="flex-1 rounded-lg h-11">
+                취소
+              </Button>
+              <Button onClick={handleAdminLogin} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-admin-login">
+                로그인
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
