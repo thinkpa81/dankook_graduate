@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import dkuLogo from "@assets/image_1767876361912.png";
+import dkuLogo from "@assets/image_1767877726952.png";
 
 interface HeaderProps {
   onLoginClick: () => void;
@@ -38,18 +38,21 @@ export default function Header({ onLoginClick }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 glass-effect border-b border-border/50 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-18 lg:h-20">
+        <div className="flex items-center justify-between h-20">
           <Link href="/" className="flex items-center gap-4" data-testid="link-home">
             <img 
               src={dkuLogo} 
               alt="단국대학교" 
-              className="h-10 lg:h-12 w-auto object-contain"
+              className="h-10 lg:h-11 w-auto object-contain"
             />
-            <div className="hidden md:block border-l border-border/50 pl-4">
-              <p className="text-xs text-muted-foreground font-medium tracking-wide">일반대학원</p>
-              <p className="font-bold text-foreground text-base lg:text-lg leading-tight">데이터지식서비스공학과</p>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="w-px h-10 bg-gray-200" />
+              <div>
+                <p className="text-xs text-primary font-semibold tracking-wide">일반대학원</p>
+                <p className="font-bold text-gray-900 text-base lg:text-lg leading-tight">데이터지식서비스공학과</p>
+              </div>
             </div>
           </Link>
 
@@ -60,14 +63,14 @@ export default function Header({ onLoginClick }: HeaderProps) {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
-                      className={`font-medium px-4 py-2 rounded-full transition-all duration-300 ${location.startsWith(item.href) ? 'text-primary bg-primary/10' : 'text-foreground hover:bg-muted'}`}
+                      className={`font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ${location.startsWith(item.href) ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
                       data-testid={`nav-${item.title}`}
                     >
                       {item.title}
                       <ChevronDown className="ml-1 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-lg border-0">
+                  <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-lg border border-gray-100">
                     {item.children.map((child) => (
                       <DropdownMenuItem key={child.title} asChild className="rounded-lg">
                         <Link 
@@ -86,7 +89,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
                   key={item.title}
                   variant="ghost" 
                   asChild
-                  className={`font-medium px-4 py-2 rounded-full transition-all duration-300 ${location === item.href ? 'text-primary bg-primary/10' : 'text-foreground hover:bg-muted'}`}
+                  className={`font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ${location === item.href ? 'text-primary bg-primary/5' : 'text-gray-700 hover:text-primary hover:bg-gray-50'}`}
                 >
                   <Link href={item.href} data-testid={`nav-${item.title}`}>
                     {item.title}
@@ -99,7 +102,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
           <div className="flex items-center gap-3">
             <Button 
               onClick={onLoginClick}
-              className="hidden sm:flex font-semibold px-6 rounded-full bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-300"
+              className="hidden sm:flex font-semibold px-6 rounded-lg bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-md hover:shadow-lg transition-all duration-300"
               data-testid="button-login"
             >
               <LogIn className="w-4 h-4 mr-2" />
@@ -109,7 +112,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
               variant="ghost" 
               size="icon" 
               onClick={onLoginClick}
-              className="sm:hidden rounded-full"
+              className="sm:hidden rounded-lg"
               data-testid="button-login-mobile"
             >
               <User className="w-5 h-5" />
@@ -117,13 +120,13 @@ export default function Header({ onLoginClick }: HeaderProps) {
 
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild className="lg:hidden">
-                <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-menu">
+                <Button variant="ghost" size="icon" className="rounded-lg" data-testid="button-menu">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
                 <div className="flex items-center gap-3 mb-8 mt-4">
-                  <img src={dkuLogo} alt="단국대학교" className="h-10 w-auto" />
+                  <img src={dkuLogo} alt="단국대학교" className="h-9 w-auto" />
                 </div>
                 <div className="flex flex-col gap-2">
                   {navItems.map((item) => (
@@ -135,7 +138,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
                       >
                         <Button 
                           variant="ghost" 
-                          className={`w-full justify-start font-medium text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/10' : ''}`}
+                          className={`w-full justify-start font-medium text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/5' : ''}`}
                         >
                           {item.title}
                         </Button>

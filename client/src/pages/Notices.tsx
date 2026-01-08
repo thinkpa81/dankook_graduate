@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Upload, Sparkles } from "lucide-react";
+import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, File, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,22 +30,28 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 
+interface FileAttachment {
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface Notice {
   id: number;
   title: string;
   content: string;
   date: string;
   views: number;
-  hasFile: boolean;
+  files: FileAttachment[];
   isImportant: boolean;
 }
 
 const initialNotices: Notice[] = [
-  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.", date: "2024.01.05", views: 234, hasFile: true, isImportant: true },
-  { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, hasFile: true, isImportant: true },
-  { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, hasFile: true, isImportant: false },
-  { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, hasFile: false, isImportant: false },
-  { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, hasFile: true, isImportant: false },
+  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true },
+  { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, files: [{ name: "수강신청안내.xlsx", type: "xlsx", size: 128000 }], isImportant: true },
+  { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, files: [{ name: "장학금신청서.docx", type: "docx", size: 89000 }], isImportant: false },
+  { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, files: [], isImportant: false },
+  { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, files: [{ name: "모집요강.pptx", type: "pptx", size: 2450000 }], isImportant: false },
 ];
 
 export default function Notices() {
@@ -60,12 +66,50 @@ export default function Notices() {
     title: "",
     content: "",
     isImportant: false,
-    hasFile: false,
+    files: [] as FileAttachment[],
   });
 
   const filteredNotices = notices.filter(notice =>
     notice.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles: FileAttachment[] = Array.from(files).map(file => ({
+        name: file.name,
+        type: file.name.split('.').pop() || '',
+        size: file.size,
+      }));
+      setFormData({ ...formData, files: [...formData.files, ...newFiles] });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFormData({ ...formData, files: formData.files.filter((_, i) => i !== index) });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'docx':
+      case 'doc':
+        return '📄';
+      case 'xlsx':
+      case 'xls':
+        return '📊';
+      case 'pptx':
+      case 'ppt':
+        return '📽️';
+      default:
+        return '📎';
+    }
+  };
 
   const handleAdd = () => {
     const newNotice: Notice = {
@@ -74,24 +118,24 @@ export default function Notices() {
       content: formData.content,
       date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
       views: 0,
-      hasFile: formData.hasFile,
+      files: formData.files,
       isImportant: formData.isImportant,
     };
     setNotices([newNotice, ...notices]);
     setIsAddOpen(false);
-    setFormData({ title: "", content: "", isImportant: false, hasFile: false });
+    setFormData({ title: "", content: "", isImportant: false, files: [] });
   };
 
   const handleEdit = () => {
     if (!editingNotice) return;
     setNotices(notices.map(n => 
       n.id === editingNotice.id 
-        ? { ...n, title: formData.title, content: formData.content, isImportant: formData.isImportant, hasFile: formData.hasFile }
+        ? { ...n, title: formData.title, content: formData.content, isImportant: formData.isImportant, files: formData.files }
         : n
     ));
     setIsEditOpen(false);
     setEditingNotice(null);
-    setFormData({ title: "", content: "", isImportant: false, hasFile: false });
+    setFormData({ title: "", content: "", isImportant: false, files: [] });
   };
 
   const handleDelete = () => {
@@ -107,18 +151,23 @@ export default function Notices() {
       title: notice.title,
       content: notice.content,
       isImportant: notice.isImportant,
-      hasFile: notice.hasFile,
+      files: notice.files,
     });
     setIsEditOpen(true);
   };
 
+  const openAdd = () => {
+    setFormData({ title: "", content: "", isImportant: false, files: [] });
+    setIsAddOpen(true);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
-      <section className="hero-gradient hero-pattern text-white py-20 lg:py-24 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-10 right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(59,130,246,0.3)_0%,_transparent_50%)]" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
@@ -126,34 +175,31 @@ export default function Notices() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span className="text-sm font-medium text-blue-100">Notices</span>
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4">공지사항</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">
+            <p className="text-blue-300 font-semibold mb-2">NOTICES</p>
+            <h1 className="text-3xl lg:text-4xl font-black mb-4">공지사항</h1>
+            <p className="text-blue-100/80 max-w-2xl">
               학과의 주요 소식과 공지사항을 확인하세요.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-12 lg:py-16 bg-background flex-1">
+      <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 placeholder="검색어를 입력하세요"
-                className="pl-12 h-12 rounded-xl border-0 bg-card shadow-md"
+                className="pl-12 h-12 rounded-lg border-gray-200 bg-white shadow-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 data-testid="input-search"
               />
             </div>
             <Button 
-              onClick={() => setIsAddOpen(true)} 
-              className="rounded-full shadow-lg font-semibold px-6"
+              onClick={openAdd} 
+              className="rounded-lg shadow-md font-semibold px-6 bg-gradient-to-r from-primary to-blue-600"
               data-testid="button-add-notice"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -161,8 +207,8 @@ export default function Notices() {
             </Button>
           </div>
 
-          <Card className="border-0 shadow-lg overflow-hidden rounded-2xl">
-            <div className="hidden md:grid grid-cols-12 gap-4 p-5 bg-gradient-to-r from-primary/5 to-transparent font-semibold text-sm text-muted-foreground border-b">
+          <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
+            <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 font-semibold text-sm text-gray-600 border-b">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-6">제목</div>
               <div className="col-span-2 text-center">작성일</div>
@@ -171,15 +217,15 @@ export default function Notices() {
               <div className="col-span-1 text-center">관리</div>
             </div>
             
-            <CardContent className="p-0">
+            <CardContent className="p-0 bg-white">
               {filteredNotices.map((notice, index) => (
                 <div 
                   key={notice.id}
-                  className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-5 hover:bg-primary/5 transition-all duration-300 group ${
-                    index !== filteredNotices.length - 1 ? 'border-b border-border/50' : ''
+                  className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${
+                    index !== filteredNotices.length - 1 ? 'border-b border-gray-100' : ''
                   }`}
                 >
-                  <div className="hidden md:flex col-span-1 items-center justify-center text-muted-foreground text-sm font-medium">
+                  <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">
                     {notice.id}
                   </div>
                   <div className="col-span-1 md:col-span-6 flex items-center gap-2">
@@ -187,29 +233,32 @@ export default function Notices() {
                       <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>
                     )}
                     <Link href={`/notices/${notice.id}`} data-testid={`link-notice-${notice.id}`}>
-                      <span className="font-semibold text-foreground hover:text-primary transition-colors cursor-pointer">
+                      <span className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer">
                         {notice.title}
                       </span>
                     </Link>
                   </div>
-                  <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-muted-foreground">
+                  <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500">
                     <Calendar className="w-4 h-4 mr-1.5 md:hidden" />
                     {notice.date}
                   </div>
-                  <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-muted-foreground">
+                  <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500">
                     <Eye className="w-4 h-4 mr-1.5 md:hidden" />
                     {notice.views}
                   </div>
-                  <div className="hidden md:flex col-span-1 items-center justify-center">
-                    {notice.hasFile && (
-                      <FileText className="w-4 h-4 text-primary" />
+                  <div className="hidden md:flex col-span-1 items-center justify-center gap-1">
+                    {notice.files.length > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <FileText className="w-4 h-4 text-primary" />
+                        {notice.files.length}
+                      </span>
                     )}
                   </div>
                   <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => openEdit(notice)}
                       data-testid={`button-edit-${notice.id}`}
                     >
@@ -218,7 +267,7 @@ export default function Notices() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 rounded-full text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => setDeleteId(notice.id)}
                       data-testid={`button-delete-${notice.id}`}
                     >
@@ -229,7 +278,7 @@ export default function Notices() {
               ))}
 
               {filteredNotices.length === 0 && (
-                <div className="p-16 text-center text-muted-foreground">
+                <div className="p-16 text-center text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
                   <p>검색 결과가 없습니다.</p>
                 </div>
@@ -238,13 +287,12 @@ export default function Notices() {
           </Card>
 
           <div className="flex items-center justify-center gap-2 mt-8">
-            <Button variant="outline" size="icon" disabled className="rounded-full" data-testid="button-prev">
+            <Button variant="outline" size="icon" disabled className="rounded-lg" data-testid="button-prev">
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button className="rounded-full w-10 h-10" data-testid="button-page-1">1</Button>
-            <Button variant="outline" className="rounded-full w-10 h-10" data-testid="button-page-2">2</Button>
-            <Button variant="outline" className="rounded-full w-10 h-10" data-testid="button-page-3">3</Button>
-            <Button variant="outline" size="icon" className="rounded-full" data-testid="button-next">
+            <Button className="rounded-lg w-10 h-10" data-testid="button-page-1">1</Button>
+            <Button variant="outline" className="rounded-lg w-10 h-10" data-testid="button-page-2">2</Button>
+            <Button variant="outline" size="icon" className="rounded-lg" data-testid="button-next">
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -252,9 +300,9 @@ export default function Notices() {
       </section>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">공지사항 등록</DialogTitle>
+            <DialogTitle className="text-xl font-bold">공지사항 등록</DialogTitle>
             <DialogDescription>새로운 공지사항을 작성합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
@@ -265,7 +313,7 @@ export default function Notices() {
                 placeholder="공지사항 제목을 입력하세요"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
                 data-testid="input-notice-title"
               />
             </div>
@@ -276,35 +324,64 @@ export default function Notices() {
                 placeholder="공지사항 내용을 입력하세요"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[150px] rounded-xl"
+                className="min-h-[120px] rounded-lg"
                 data-testid="textarea-notice-content"
               />
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="important"
-                  checked={formData.isImportant}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
-                  data-testid="checkbox-important"
+            <div className="space-y-2">
+              <Label>첨부파일 (Word, Excel, PowerPoint)</Label>
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  data-testid="input-file-upload"
                 />
-                <Label htmlFor="important" className="cursor-pointer">중요 공지</Label>
+                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
+                  <span className="text-xs text-gray-400">.doc, .docx, .xls, .xlsx, .ppt, .pptx</span>
+                </label>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasFile"
-                  checked={formData.hasFile}
-                  onCheckedChange={(checked) => setFormData({ ...formData, hasFile: checked as boolean })}
-                  data-testid="checkbox-file"
-                />
-                <Label htmlFor="hasFile" className="cursor-pointer">파일 첨부</Label>
-              </div>
+              {formData.files.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {formData.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="important"
+                checked={formData.isImportant}
+                onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
+                data-testid="checkbox-important"
+              />
+              <Label htmlFor="important" className="cursor-pointer">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-xl h-12">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-11">
                 취소
               </Button>
-              <Button onClick={handleAdd} className="flex-1 rounded-xl h-12 font-semibold" data-testid="button-submit-notice">
+              <Button onClick={handleAdd} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-submit-notice">
                 등록
               </Button>
             </div>
@@ -313,9 +390,9 @@ export default function Notices() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">공지사항 수정</DialogTitle>
+            <DialogTitle className="text-xl font-bold">공지사항 수정</DialogTitle>
             <DialogDescription>공지사항을 수정합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
@@ -325,7 +402,7 @@ export default function Notices() {
                 id="edit-title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
                 data-testid="input-edit-title"
               />
             </div>
@@ -335,33 +412,61 @@ export default function Notices() {
                 id="edit-content"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[150px] rounded-xl"
+                className="min-h-[120px] rounded-lg"
                 data-testid="textarea-edit-content"
               />
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="edit-important"
-                  checked={formData.isImportant}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
+            <div className="space-y-2">
+              <Label>첨부파일</Label>
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload-edit"
                 />
-                <Label htmlFor="edit-important" className="cursor-pointer">중요 공지</Label>
+                <label htmlFor="file-upload-edit" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
+                </label>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="edit-hasFile"
-                  checked={formData.hasFile}
-                  onCheckedChange={(checked) => setFormData({ ...formData, hasFile: checked as boolean })}
-                />
-                <Label htmlFor="edit-hasFile" className="cursor-pointer">파일 첨부</Label>
-              </div>
+              {formData.files.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {formData.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="edit-important"
+                checked={formData.isImportant}
+                onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
+              />
+              <Label htmlFor="edit-important" className="cursor-pointer">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-xl h-12">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-11">
                 취소
               </Button>
-              <Button onClick={handleEdit} className="flex-1 rounded-xl h-12 font-semibold" data-testid="button-update-notice">
+              <Button onClick={handleEdit} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-update-notice">
                 수정
               </Button>
             </div>
@@ -370,7 +475,7 @@ export default function Notices() {
       </Dialog>
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>공지사항을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -378,8 +483,8 @@ export default function Notices() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-xl" data-testid="button-confirm-delete">
+            <AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-lg" data-testid="button-confirm-delete">
               삭제
             </AlertDialogAction>
           </AlertDialogFooter>

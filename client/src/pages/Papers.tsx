@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
 import { motion } from "framer-motion";
-import { FileText, Users, BookOpen, Plus, Pencil, Trash2, Sparkles } from "lucide-react";
+import { FileText, Users, BookOpen, Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 
+interface FileAttachment {
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface Paper {
   id: number;
   title: string;
@@ -37,28 +43,29 @@ interface Paper {
   journal?: string;
   year: string;
   volume?: string;
+  files: FileAttachment[];
 }
 
 const initialPapers: Record<string, Paper[]> = {
   "domestic-conference": [
-    { id: 1, title: "빅데이터 분석을 활용한 소비자 행동 예측 모델 연구", authors: "김철수, 이영희", venue: "한국정보과학회 학술대회", year: "2024" },
-    { id: 2, title: "자연어 처리 기반 감성 분석 시스템 개발", authors: "박지민, 최수진", venue: "한국데이터베이스학회 학술대회", year: "2023" },
-    { id: 3, title: "클라우드 컴퓨팅 환경에서의 데이터 보안 연구", authors: "정민수, 김하늘", venue: "한국정보보호학회 학술대회", year: "2023" },
+    { id: 1, title: "빅데이터 분석을 활용한 소비자 행동 예측 모델 연구", authors: "김철수, 이영희", venue: "한국정보과학회 학술대회", year: "2024", files: [{ name: "논문.pdf", type: "pdf", size: 245000 }] },
+    { id: 2, title: "자연어 처리 기반 감성 분석 시스템 개발", authors: "박지민, 최수진", venue: "한국데이터베이스학회 학술대회", year: "2023", files: [] },
+    { id: 3, title: "클라우드 컴퓨팅 환경에서의 데이터 보안 연구", authors: "정민수, 김하늘", venue: "한국정보보호학회 학술대회", year: "2023", files: [{ name: "발표자료.pptx", type: "pptx", size: 1250000 }] },
   ],
   "international-conference": [
-    { id: 1, title: "Deep Learning Approach for Time Series Prediction", authors: "Kim, J., Lee, H.", venue: "IEEE International Conference on Data Mining", year: "2024" },
-    { id: 2, title: "A Novel Framework for Knowledge Graph Construction", authors: "Park, S., Choi, M.", venue: "ACM SIGKDD Conference", year: "2023" },
+    { id: 1, title: "Deep Learning Approach for Time Series Prediction", authors: "Kim, J., Lee, H.", venue: "IEEE International Conference on Data Mining", year: "2024", files: [] },
+    { id: 2, title: "A Novel Framework for Knowledge Graph Construction", authors: "Park, S., Choi, M.", venue: "ACM SIGKDD Conference", year: "2023", files: [] },
   ],
   "domestic-journal": [
-    { id: 1, title: "인공지능 기반 의료 데이터 분석 플랫폼 설계", authors: "이민호, 김서연", journal: "한국정보과학회논문지", year: "2024", volume: "51(3)" },
-    { id: 2, title: "메타버스 환경에서의 사용자 경험 분석", authors: "정유진, 박현우", journal: "한국HCI학회논문지", year: "2023", volume: "18(4)" },
+    { id: 1, title: "인공지능 기반 의료 데이터 분석 플랫폼 설계", authors: "이민호, 김서연", journal: "한국정보과학회논문지", year: "2024", volume: "51(3)", files: [] },
+    { id: 2, title: "메타버스 환경에서의 사용자 경험 분석", authors: "정유진, 박현우", journal: "한국HCI학회논문지", year: "2023", volume: "18(4)", files: [] },
   ],
   "international-journal": [
-    { id: 1, title: "Machine Learning for Predictive Analytics in Healthcare", authors: "Kim, Y., Lee, J.", journal: "IEEE Transactions on Knowledge and Data Engineering", year: "2024", volume: "36(2)" },
-    { id: 2, title: "Efficient Data Mining Algorithms for Big Data Processing", authors: "Park, H., Choi, S.", journal: "ACM Computing Surveys", year: "2023", volume: "55(4)" },
+    { id: 1, title: "Machine Learning for Predictive Analytics in Healthcare", authors: "Kim, Y., Lee, J.", journal: "IEEE Transactions on Knowledge and Data Engineering", year: "2024", volume: "36(2)", files: [] },
+    { id: 2, title: "Efficient Data Mining Algorithms for Big Data Processing", authors: "Park, H., Choi, S.", journal: "ACM Computing Surveys", year: "2023", volume: "55(4)", files: [] },
   ],
   "main-journal": [
-    { id: 1, title: "데이터지식서비스공학과 연구 동향 분석", authors: "학과 연구팀", journal: "단국대학교 대학원 논문집", year: "2024", volume: "12(1)" },
+    { id: 1, title: "데이터지식서비스공학과 연구 동향 분석", authors: "학과 연구팀", journal: "단국대학교 대학원 논문집", year: "2024", volume: "12(1)", files: [] },
   ]
 };
 
@@ -71,11 +78,11 @@ const categoryTitles: Record<string, string> = {
 };
 
 const categoryColors: Record<string, string> = {
-  "domestic-conference": "from-blue-500 to-indigo-500",
-  "international-conference": "from-purple-500 to-pink-500",
+  "domestic-conference": "from-blue-600 to-indigo-600",
+  "international-conference": "from-violet-600 to-purple-600",
   "domestic-journal": "from-emerald-500 to-teal-500",
   "international-journal": "from-orange-500 to-amber-500",
-  "main-journal": "from-rose-500 to-red-500",
+  "main-journal": "from-rose-500 to-pink-500",
 };
 
 export default function Papers() {
@@ -94,10 +101,51 @@ export default function Papers() {
     journal: "",
     year: "",
     volume: "",
+    files: [] as FileAttachment[],
   });
 
   const currentPapers = papers[category] || [];
   const isJournal = category.includes("journal");
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles: FileAttachment[] = Array.from(files).map(file => ({
+        name: file.name,
+        type: file.name.split('.').pop() || '',
+        size: file.size,
+      }));
+      setFormData({ ...formData, files: [...formData.files, ...newFiles] });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFormData({ ...formData, files: formData.files.filter((_, i) => i !== index) });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'docx':
+      case 'doc':
+        return '📄';
+      case 'xlsx':
+      case 'xls':
+        return '📊';
+      case 'pptx':
+      case 'ppt':
+        return '📽️';
+      case 'pdf':
+        return '📕';
+      default:
+        return '📎';
+    }
+  };
 
   const handleAdd = () => {
     const newPaper: Paper = {
@@ -105,11 +153,12 @@ export default function Papers() {
       title: formData.title,
       authors: formData.authors,
       year: formData.year,
+      files: formData.files,
       ...(isJournal ? { journal: formData.journal, volume: formData.volume } : { venue: formData.venue }),
     };
     setPapers({ ...papers, [category]: [newPaper, ...currentPapers] });
     setIsAddOpen(false);
-    setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "" });
+    setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "", files: [] });
   };
 
   const handleEdit = () => {
@@ -123,6 +172,7 @@ export default function Papers() {
               title: formData.title,
               authors: formData.authors,
               year: formData.year,
+              files: formData.files,
               ...(isJournal ? { journal: formData.journal, volume: formData.volume } : { venue: formData.venue }),
             }
           : p
@@ -130,7 +180,7 @@ export default function Papers() {
     });
     setIsEditOpen(false);
     setEditingPaper(null);
-    setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "" });
+    setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "", files: [] });
   };
 
   const handleDelete = () => {
@@ -149,17 +199,23 @@ export default function Papers() {
       journal: paper.journal || "",
       year: paper.year,
       volume: paper.volume || "",
+      files: paper.files || [],
     });
     setIsEditOpen(true);
   };
 
+  const openAdd = () => {
+    setFormData({ title: "", authors: "", venue: "", journal: "", year: "", volume: "", files: [] });
+    setIsAddOpen(true);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
-      <section className="hero-gradient hero-pattern text-white py-20 lg:py-24 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute bottom-10 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.3)_0%,_transparent_50%)]" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
@@ -167,44 +223,41 @@ export default function Papers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span className="text-sm font-medium text-blue-100">Papers & Publications</span>
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4">논문</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">
+            <p className="text-blue-300 font-semibold mb-2">PAPERS & PUBLICATIONS</p>
+            <h1 className="text-3xl lg:text-4xl font-black mb-4">논문</h1>
+            <p className="text-blue-100/80 max-w-2xl">
               학과의 연구 성과와 논문을 확인하세요.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-12 lg:py-16 bg-background flex-1">
+      <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
             <Tabs value={category} className="w-full lg:w-auto">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1 bg-muted rounded-2xl">
-                <TabsTrigger value="domestic-conference" asChild className="rounded-xl py-3 data-[state=active]:shadow-md">
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1 bg-white shadow-md rounded-xl">
+                <TabsTrigger value="domestic-conference" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/domestic-conference" data-testid="tab-domestic-conf">
                     국내 학술대회
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="international-conference" asChild className="rounded-xl py-3 data-[state=active]:shadow-md">
+                <TabsTrigger value="international-conference" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/international-conference" data-testid="tab-intl-conf">
                     해외 학술대회
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="domestic-journal" asChild className="rounded-xl py-3 data-[state=active]:shadow-md">
+                <TabsTrigger value="domestic-journal" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/domestic-journal" data-testid="tab-domestic-journal">
                     국내 저널
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="international-journal" asChild className="rounded-xl py-3 data-[state=active]:shadow-md">
+                <TabsTrigger value="international-journal" asChild className="rounded-lg py-2.5 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/international-journal" data-testid="tab-intl-journal">
                     해외 저널
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="main-journal" asChild className="rounded-xl py-3 col-span-2 lg:col-span-1 data-[state=active]:shadow-md">
+                <TabsTrigger value="main-journal" asChild className="rounded-lg py-2.5 text-sm col-span-2 lg:col-span-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                   <Link href="/papers/main-journal" data-testid="tab-main-journal">
                     본 저널
                   </Link>
@@ -213,8 +266,8 @@ export default function Papers() {
             </Tabs>
 
             <Button 
-              onClick={() => setIsAddOpen(true)} 
-              className="rounded-full shadow-lg font-semibold px-6"
+              onClick={openAdd} 
+              className="rounded-lg shadow-md font-semibold px-6 bg-gradient-to-r from-primary to-blue-600"
               data-testid="button-add-paper"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -228,28 +281,28 @@ export default function Papers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="flex items-center gap-3 mb-8">
-              <div className={`w-12 h-12 bg-gradient-to-br ${categoryColors[category]} rounded-xl flex items-center justify-center shadow-lg`}>
-                <BookOpen className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`w-10 h-10 bg-gradient-to-br ${categoryColors[category]} rounded-lg flex items-center justify-center shadow-md`}>
+                <BookOpen className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-2xl lg:text-3xl font-black text-foreground">
+              <h2 className="text-xl lg:text-2xl font-black text-gray-900">
                 {categoryTitles[category]}
               </h2>
             </div>
 
             <div className="space-y-4">
               {currentPapers.map((paper) => (
-                <Card key={paper.id} className="border-0 shadow-lg card-hover rounded-2xl overflow-hidden group">
-                  <CardContent className="p-6 lg:p-8">
-                    <div className="flex items-start gap-5">
-                      <div className={`w-14 h-14 bg-gradient-to-br ${categoryColors[category]} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
-                        <BookOpen className="w-7 h-7 text-white" />
+                <Card key={paper.id} className="border-0 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden group">
+                  <CardContent className="p-5 lg:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 bg-gradient-to-br ${categoryColors[category]} rounded-lg flex items-center justify-center flex-shrink-0 shadow-md`}>
+                        <BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg lg:text-xl text-foreground mb-3">
+                        <h3 className="font-bold text-lg text-gray-900 mb-2">
                           {paper.title}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                           <span className="flex items-center gap-1.5">
                             <Users className="w-4 h-4" />
                             {paper.authors}
@@ -263,12 +316,21 @@ export default function Papers() {
                             {paper.year}
                           </Badge>
                         </div>
+                        {paper.files && paper.files.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {paper.files.map((file, index) => (
+                              <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">
+                                {getFileIcon(file.type)} {file.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-9 w-9 rounded-full"
+                          className="h-8 w-8 rounded-lg"
                           onClick={() => openEdit(paper)}
                           data-testid={`button-edit-paper-${paper.id}`}
                         >
@@ -277,7 +339,7 @@ export default function Papers() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-9 w-9 rounded-full text-destructive"
+                          className="h-8 w-8 rounded-lg text-destructive"
                           onClick={() => setDeleteId(paper.id)}
                           data-testid={`button-delete-paper-${paper.id}`}
                         >
@@ -290,7 +352,7 @@ export default function Papers() {
               ))}
 
               {currentPapers.length === 0 && (
-                <div className="p-16 text-center text-muted-foreground">
+                <div className="p-16 text-center text-gray-500">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" />
                   <p>등록된 논문이 없습니다.</p>
                 </div>
@@ -301,9 +363,9 @@ export default function Papers() {
       </section>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">논문 등록</DialogTitle>
+            <DialogTitle className="text-xl font-bold">논문 등록</DialogTitle>
             <DialogDescription>{categoryTitles[category]}에 새 논문을 등록합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
@@ -313,7 +375,7 @@ export default function Papers() {
                 placeholder="논문 제목을 입력하세요"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
                 data-testid="input-paper-title"
               />
             </div>
@@ -323,7 +385,7 @@ export default function Papers() {
                 placeholder="저자를 입력하세요 (예: 홍길동, 김철수)"
                 value={formData.authors}
                 onChange={(e) => setFormData({ ...formData, authors: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
                 data-testid="input-paper-authors"
               />
             </div>
@@ -333,7 +395,7 @@ export default function Papers() {
                 placeholder={isJournal ? "저널명을 입력하세요" : "학술대회명을 입력하세요"}
                 value={isJournal ? formData.journal : formData.venue}
                 onChange={(e) => setFormData({ ...formData, [isJournal ? 'journal' : 'venue']: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
                 data-testid="input-paper-venue"
               />
             </div>
@@ -344,7 +406,7 @@ export default function Papers() {
                   placeholder="2024"
                   value={formData.year}
                   onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  className="h-12 rounded-xl"
+                  className="h-11 rounded-lg"
                   data-testid="input-paper-year"
                 />
               </div>
@@ -355,17 +417,55 @@ export default function Papers() {
                     placeholder="51(3)"
                     value={formData.volume}
                     onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
-                    className="h-12 rounded-xl"
+                    className="h-11 rounded-lg"
                     data-testid="input-paper-volume"
                   />
                 </div>
               )}
             </div>
+            <div className="space-y-2">
+              <Label>첨부파일</Label>
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="paper-file-upload"
+                />
+                <label htmlFor="paper-file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
+                </label>
+              </div>
+              {formData.files.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {formData.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-xl h-12">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-11">
                 취소
               </Button>
-              <Button onClick={handleAdd} className="flex-1 rounded-xl h-12 font-semibold" data-testid="button-submit-paper">
+              <Button onClick={handleAdd} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-submit-paper">
                 등록
               </Button>
             </div>
@@ -374,9 +474,9 @@ export default function Papers() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">논문 수정</DialogTitle>
+            <DialogTitle className="text-xl font-bold">논문 수정</DialogTitle>
             <DialogDescription>논문 정보를 수정합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 mt-4">
@@ -385,8 +485,7 @@ export default function Papers() {
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-xl"
-                data-testid="input-edit-paper-title"
+                className="h-11 rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -394,7 +493,7 @@ export default function Papers() {
               <Input
                 value={formData.authors}
                 onChange={(e) => setFormData({ ...formData, authors: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -402,7 +501,7 @@ export default function Papers() {
               <Input
                 value={isJournal ? formData.journal : formData.venue}
                 onChange={(e) => setFormData({ ...formData, [isJournal ? 'journal' : 'venue']: e.target.value })}
-                className="h-12 rounded-xl"
+                className="h-11 rounded-lg"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -411,7 +510,7 @@ export default function Papers() {
                 <Input
                   value={formData.year}
                   onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  className="h-12 rounded-xl"
+                  className="h-11 rounded-lg"
                 />
               </div>
               {isJournal && (
@@ -420,16 +519,54 @@ export default function Papers() {
                   <Input
                     value={formData.volume}
                     onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
-                    className="h-12 rounded-xl"
+                    className="h-11 rounded-lg"
                   />
                 </div>
               )}
             </div>
+            <div className="space-y-2">
+              <Label>첨부파일</Label>
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="paper-file-upload-edit"
+                />
+                <label htmlFor="paper-file-upload-edit" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
+                </label>
+              </div>
+              {formData.files.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {formData.files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-xl h-12">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-11">
                 취소
               </Button>
-              <Button onClick={handleEdit} className="flex-1 rounded-xl h-12 font-semibold" data-testid="button-update-paper">
+              <Button onClick={handleEdit} className="flex-1 rounded-lg h-11 font-semibold bg-gradient-to-r from-primary to-blue-600" data-testid="button-update-paper">
                 수정
               </Button>
             </div>
@@ -438,7 +575,7 @@ export default function Papers() {
       </Dialog>
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>논문을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -446,8 +583,8 @@ export default function Papers() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-xl">
+            <AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-lg">
               삭제
             </AlertDialogAction>
           </AlertDialogFooter>
