@@ -30,7 +30,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import { getTalents, setTalents, getUsers, resetUserPassword, TalentEntry, User as UserType } from "@/lib/dataStore";
+import { getTalents, setTalents, getUsers, resetUserPassword, deleteUser, TalentEntry, User as UserType } from "@/lib/dataStore";
 
 export default function TalentPool() {
   const [loginOpen, setLoginOpen] = useState(false);
@@ -46,6 +46,7 @@ export default function TalentPool() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [resetUserId, setResetUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
   const [adminTab, setAdminTab] = useState<"talents" | "users">("talents");
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", education: "", major: "", interestedMajor: "", motivation: "", agreePrivacy: false,
@@ -94,6 +95,14 @@ export default function TalentPool() {
       setUsersState(getUsers());
       setResetUserId(null); setNewPassword("");
       alert("비밀번호가 초기화되었습니다.");
+    }
+  };
+
+  const handleDeleteUser = () => {
+    if (deleteUserId) {
+      deleteUser(deleteUserId);
+      setUsersState(getUsers());
+      setDeleteUserId(null);
     }
   };
 
@@ -227,7 +236,7 @@ export default function TalentPool() {
                                 <td className="px-4 py-4 text-sm text-gray-600">{user.username}</td>
                                 <td className="px-4 py-4 text-sm text-gray-600">{user.email}</td>
                                 <td className="px-4 py-4 text-sm text-gray-500"><div className="flex flex-col"><span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{user.registeredAt}</span><span className="flex items-center gap-1 text-gray-400"><Clock className="w-3.5 h-3.5" />{user.registeredTime}</span></div></td>
-                                <td className="px-4 py-4"><Button variant="outline" size="sm" className="rounded-lg" onClick={() => setResetUserId(user.id)}><Key className="w-3 h-3 mr-1" />비밀번호 초기화</Button></td>
+                                <td className="px-4 py-4"><div className="flex gap-1"><Button variant="outline" size="sm" className="rounded-lg" onClick={() => setResetUserId(user.id)}><Key className="w-3 h-3 mr-1" />비밀번호 초기화</Button><Button variant="outline" size="sm" className="rounded-lg text-destructive border-destructive/50" onClick={() => setDeleteUserId(user.id)}><Trash2 className="w-3 h-3 mr-1" />강제탈퇴</Button></div></td>
                               </tr>
                             ))}
                           </tbody>
@@ -287,6 +296,10 @@ export default function TalentPool() {
 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>인재풀 정보를 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={handleDeleteEntry} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteUserId !== null} onOpenChange={() => setDeleteUserId(null)}>
+        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>회원을 강제탈퇴 하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다. 해당 회원은 더 이상 로그인할 수 없게 됩니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground rounded-lg">강제탈퇴</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
       <Footer />

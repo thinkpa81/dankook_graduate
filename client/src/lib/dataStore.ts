@@ -186,6 +186,11 @@ export function resetUserPassword(userId: number, newPassword: string) {
   setUsers(users.map(u => u.id === userId ? { ...u, password: newPassword } : u));
 }
 
+export function deleteUser(userId: number) {
+  const users = getUsers();
+  setUsers(users.filter(u => u.id !== userId));
+}
+
 export function findUserByUsername(username: string): User | undefined {
   return getUsers().find(u => u.username === username);
 }

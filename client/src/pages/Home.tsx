@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
@@ -19,13 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-
-const notices = [
-  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", date: "2024.01.05", views: 234 },
-  { id: 2, title: "겨울학기 수강신청 안내", date: "2024.01.03", views: 189 },
-  { id: 3, title: "대학원 장학금 신청 안내", date: "2024.01.02", views: 156 },
-  { id: 4, title: "연구실 안전교육 이수 안내", date: "2023.12.28", views: 142 },
-];
+import { getNotices } from "@/lib/dataStore";
 
 const features = [
   {
@@ -50,10 +44,22 @@ const features = [
 
 export default function Home() {
   const [loginOpen, setLoginOpen] = useState(false);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [notices, setNotices] = useState<{ id: number; title: string; date: string; views: number }[]>([]);
+
+  useEffect(() => {
+    const storedNotices = getNotices();
+    setNotices(storedNotices.slice(0, 4).map((n, index) => ({
+      id: index + 1,
+      title: n.title,
+      date: n.date,
+      views: n.views
+    })));
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
       
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800" />
@@ -171,10 +177,12 @@ export default function Home() {
               </div>
               <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
                 <CardContent className="p-0">
-                  {notices.map((notice, index) => (
+                  {notices.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">공지사항이 없습니다.</div>
+                  ) : notices.map((notice, index) => (
                     <Link 
                       key={notice.id} 
-                      href={`/notices/${notice.id}`}
+                      href="/notices"
                       data-testid={`link-notice-${notice.id}`}
                     >
                       <div 
@@ -273,6 +281,7 @@ export default function Home() {
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
+      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }

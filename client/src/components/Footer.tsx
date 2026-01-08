@@ -84,7 +84,7 @@ export default function Footer() {
             <div className="mt-6 pt-4 border-t border-slate-700">
               <h4 className="font-medium text-white mb-2 text-base">관련 사이트</h4>
               <a 
-                href="https://www.dankook.ac.kr" 
+                href="https://grad.dankook.ac.kr/grad" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hover:text-blue-400 transition-colors flex items-center gap-2 text-base"

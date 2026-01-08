@@ -272,9 +272,11 @@ export default function Notices() {
             </div>
             
             <CardContent className="p-0 bg-white">
-              {paginatedNotices.map((notice, index) => (
+              {paginatedNotices.map((notice, index) => {
+                const displayNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                return (
                 <div key={notice.id} className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                  <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{notice.id}</div>
+                  <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{displayNumber}</div>
                   <div className="col-span-1 md:col-span-6 flex items-center gap-2">
                     {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
                     <span className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer text-base" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</span>
@@ -288,7 +290,7 @@ export default function Notices() {
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteId(notice.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
-              ))}
+              )})}
               {filteredNotices.length === 0 && (
                 <div className="p-16 text-center text-gray-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">검색 결과가 없습니다.</p></div>
               )}
