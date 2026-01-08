@@ -28,14 +28,22 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import { getNotices, setNotices, Notice, Comment, FileAttachment } from "@/lib/dataStore";
+import { api, Notice, NoticeComment } from "@/lib/api";
+
+interface FileAttachment {
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+}
 
 const ITEMS_PER_PAGE = 5;
 
 export default function Notices() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
-  const [notices, setNoticesState] = useState<Notice[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -56,14 +64,20 @@ export default function Notices() {
     files: [] as FileAttachment[],
   });
 
-  useEffect(() => {
-    setNoticesState(getNotices());
-  }, []);
-
-  const saveNotices = (newNotices: Notice[]) => {
-    setNoticesState(newNotices);
-    setNotices(newNotices);
+  const loadNotices = async () => {
+    try {
+      const data = await api.notices.list();
+      setNotices(data);
+    } catch (e) {
+      console.error("Failed to load notices", e);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadNotices();
+  }, []);
 
   const filteredNotices = notices.filter(notice =>
     notice.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -117,39 +131,51 @@ export default function Notices() {
     }
   };
 
-  const handleAdd = () => {
-    const newNotice: Notice = {
-      id: notices.length > 0 ? Math.max(...notices.map(n => n.id)) + 1 : 1,
-      title: formData.title,
-      content: formData.content,
-      date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
-      views: 0,
-      files: formData.files,
-      isImportant: formData.isImportant,
-      comments: [],
-    };
-    saveNotices([newNotice, ...notices]);
-    setIsAddOpen(false);
-    setFormData({ title: "", content: "", isImportant: false, files: [] });
+  const handleAdd = async () => {
+    try {
+      await api.notices.create({
+        title: formData.title,
+        content: formData.content,
+        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+        views: 0,
+        isImportant: formData.isImportant,
+        files: formData.files.map(f => f.name),
+      });
+      await loadNotices();
+      setIsAddOpen(false);
+      setFormData({ title: "", content: "", isImportant: false, files: [] });
+    } catch (e) {
+      console.error("Failed to add notice", e);
+    }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingNotice) return;
-    const updated = notices.map(n => 
-      n.id === editingNotice.id 
-        ? { ...n, title: formData.title, content: formData.content, isImportant: formData.isImportant, files: formData.files }
-        : n
-    );
-    saveNotices(updated);
-    setIsEditOpen(false);
-    setEditingNotice(null);
-    setFormData({ title: "", content: "", isImportant: false, files: [] });
+    try {
+      await api.notices.update(editingNotice.id, {
+        title: formData.title,
+        content: formData.content,
+        isImportant: formData.isImportant,
+        files: formData.files.map(f => f.name),
+      });
+      await loadNotices();
+      setIsEditOpen(false);
+      setEditingNotice(null);
+      setFormData({ title: "", content: "", isImportant: false, files: [] });
+    } catch (e) {
+      console.error("Failed to edit notice", e);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      saveNotices(notices.filter(n => n.id !== deleteId));
-      setDeleteId(null);
+      try {
+        await api.notices.delete(deleteId);
+        await loadNotices();
+        setDeleteId(null);
+      } catch (e) {
+        console.error("Failed to delete notice", e);
+      }
     }
   };
 
@@ -159,16 +185,22 @@ export default function Notices() {
       title: notice.title,
       content: notice.content,
       isImportant: notice.isImportant,
-      files: notice.files,
+      files: notice.files.map(name => ({ name, type: name.split('.').pop() || '', size: 0, url: '' })),
     });
     setIsEditOpen(true);
   };
 
-  const openView = (notice: Notice) => {
-    const updated = notices.map(n => n.id === notice.id ? { ...n, views: n.views + 1 } : n);
-    saveNotices(updated);
-    setViewingNotice(updated.find(n => n.id === notice.id) || notice);
-    setIsViewOpen(true);
+  const openView = async (notice: Notice) => {
+    try {
+      await api.notices.incrementViews(notice.id);
+      const updated = await api.notices.get(notice.id);
+      setViewingNotice(updated);
+      setNotices(prev => prev.map(n => n.id === notice.id ? updated : n));
+      setIsViewOpen(true);
+    } catch (e) {
+      setViewingNotice(notice);
+      setIsViewOpen(true);
+    }
   };
 
   const openAdd = () => {
@@ -176,53 +208,58 @@ export default function Notices() {
     setIsAddOpen(true);
   };
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!viewingNotice || !newComment.trim() || !commentAuthor.trim()) return;
-    const comment: Comment = {
-      id: Date.now(),
-      author: commentAuthor,
-      content: newComment,
-      date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
-    };
-    const updated = notices.map(n => 
-      n.id === viewingNotice.id 
-        ? { ...n, comments: [...n.comments, comment] }
-        : n
-    );
-    saveNotices(updated);
-    setViewingNotice({ ...viewingNotice, comments: [...viewingNotice.comments, comment] });
-    setNewComment("");
-    setCommentAuthor("");
+    try {
+      const comment = await api.notices.addComment(viewingNotice.id, {
+        author: commentAuthor,
+        content: newComment,
+        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+      });
+      const updated = { ...viewingNotice, comments: [...viewingNotice.comments, comment] };
+      setViewingNotice(updated);
+      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
+      setNewComment("");
+      setCommentAuthor("");
+    } catch (e) {
+      console.error("Failed to add comment", e);
+    }
   };
 
-  const startEditComment = (comment: Comment) => {
+  const startEditComment = (comment: NoticeComment) => {
     setEditingCommentId(comment.id);
     setEditingCommentContent(comment.content);
   };
 
-  const saveEditComment = () => {
+  const saveEditComment = async () => {
     if (!viewingNotice || !editingCommentId) return;
-    const updatedComments = viewingNotice.comments.map(c => 
-      c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
-    );
-    const updated = notices.map(n => 
-      n.id === viewingNotice.id ? { ...n, comments: updatedComments } : n
-    );
-    saveNotices(updated);
-    setViewingNotice({ ...viewingNotice, comments: updatedComments });
-    setEditingCommentId(null);
-    setEditingCommentContent("");
+    try {
+      await api.notices.updateComment(editingCommentId, editingCommentContent);
+      const updatedComments = viewingNotice.comments.map(c => 
+        c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
+      );
+      const updated = { ...viewingNotice, comments: updatedComments };
+      setViewingNotice(updated);
+      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+    } catch (e) {
+      console.error("Failed to update comment", e);
+    }
   };
 
-  const deleteComment = () => {
+  const deleteComment = async () => {
     if (!viewingNotice || !deleteCommentId) return;
-    const updatedComments = viewingNotice.comments.filter(c => c.id !== deleteCommentId);
-    const updated = notices.map(n => 
-      n.id === viewingNotice.id ? { ...n, comments: updatedComments } : n
-    );
-    saveNotices(updated);
-    setViewingNotice({ ...viewingNotice, comments: updatedComments });
-    setDeleteCommentId(null);
+    try {
+      await api.notices.deleteComment(deleteCommentId);
+      const updatedComments = viewingNotice.comments.filter(c => c.id !== deleteCommentId);
+      const updated = { ...viewingNotice, comments: updatedComments };
+      setViewingNotice(updated);
+      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
+      setDeleteCommentId(null);
+    } catch (e) {
+      console.error("Failed to delete comment", e);
+    }
   };
 
   return (
@@ -272,7 +309,9 @@ export default function Notices() {
             </div>
             
             <CardContent className="p-0 bg-white">
-              {paginatedNotices.map((notice, index) => {
+              {loading ? (
+                <div className="p-16 text-center text-gray-500">로딩 중...</div>
+              ) : paginatedNotices.map((notice, index) => {
                 const displayNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                 return (
                 <div key={notice.id} className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''}`}>
@@ -291,7 +330,7 @@ export default function Notices() {
                   </div>
                 </div>
               )})}
-              {filteredNotices.length === 0 && (
+              {!loading && filteredNotices.length === 0 && (
                 <div className="p-16 text-center text-gray-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">검색 결과가 없습니다.</p></div>
               )}
             </CardContent>
@@ -324,14 +363,13 @@ export default function Notices() {
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
                 <div className="space-y-2">
-                  {viewingNotice.files.map((file, index) => (
+                  {viewingNotice.files.map((fileName, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{getFileIcon(file.type)}</span>
-                        <span className="text-sm font-medium text-gray-700">{file.name}</span>
-                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                        <span className="text-lg">{getFileIcon(fileName.split('.').pop() || '')}</span>
+                        <span className="text-sm font-medium text-gray-700">{fileName}</span>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-primary h-8" onClick={() => downloadFile(file)}>
+                      <Button variant="ghost" size="sm" className="text-primary h-8">
                         <Download className="w-4 h-4 mr-1" />다운로드
                       </Button>
                     </div>

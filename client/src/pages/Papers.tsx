@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
-import { Link, useRoute } from "wouter";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
-import { FileText, Users, BookOpen, Plus, Pencil, Trash2, Upload, X, MessageSquare, Send, Download, ExternalLink, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { BookOpen, Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Upload, X, Download, MessageSquare, Send, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -28,34 +28,46 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import { getPapers, setPapers, Paper, Comment, FileAttachment } from "@/lib/dataStore";
+import { api, Paper, PaperComment } from "@/lib/api";
 
-const categoryTitles: Record<string, string> = {
+interface FileAttachment {
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+}
+
+type CategoryKey = "domestic-conference" | "international-conference" | "domestic-journal" | "international-journal" | "main-journal" | "paper-review";
+
+const categoryTitles: Record<CategoryKey, string> = {
   "domestic-conference": "국내 학술대회",
-  "international-conference": "해외 학술대회",
+  "international-conference": "국제 학술대회",
   "domestic-journal": "국내 저널",
-  "international-journal": "해외 저널",
-  "main-journal": "본 저널",
-  "paper-review": "논문리뷰",
+  "international-journal": "국제 저널",
+  "main-journal": "주요 저널",
+  "paper-review": "논문 심사",
 };
 
-const categoryColors: Record<string, string> = {
-  "domestic-conference": "from-blue-600 to-indigo-600",
-  "international-conference": "from-violet-600 to-purple-600",
+const categoryColors: Record<CategoryKey, string> = {
+  "domestic-conference": "from-blue-500 to-cyan-500",
+  "international-conference": "from-violet-500 to-purple-500",
   "domestic-journal": "from-emerald-500 to-teal-500",
   "international-journal": "from-orange-500 to-amber-500",
   "main-journal": "from-rose-500 to-pink-500",
-  "paper-review": "from-cyan-500 to-blue-500",
+  "paper-review": "from-indigo-500 to-blue-500",
 };
 
 const ITEMS_PER_PAGE = 5;
 
 export default function Papers() {
+  const params = useParams<{ category?: string }>();
+  const category = (params.category || "domestic-conference") as CategoryKey;
+  const isJournal = category.includes("journal");
+
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
-  const [, params] = useRoute("/papers/:category");
-  const category = params?.category || "domestic-conference";
-  const [papers, setPapersState] = useState<Record<string, Paper[]>>({});
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -70,20 +82,32 @@ export default function Papers() {
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    title: "", authors: "", firstAuthor: "", correspondingAuthor: "", websiteUrl: "", venue: "", journal: "", year: "", volume: "", files: [] as FileAttachment[],
+    title: "", authors: "", firstAuthor: "", correspondingAuthor: "", venue: "", journal: "", volume: "", year: "", websiteUrl: "", files: [] as FileAttachment[],
   });
 
-  useEffect(() => {
-    setPapersState(getPapers());
-  }, []);
-
-  const savePapers = (newPapers: Record<string, Paper[]>) => {
-    setPapersState(newPapers);
-    setPapers(newPapers);
+  const loadPapers = async () => {
+    try {
+      const data = await api.papers.list();
+      setPapers(data);
+    } catch (e) {
+      console.error("Failed to load papers", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentPapers = papers[category] || [];
-  const isJournal = category.includes("journal") || category === "paper-review";
+  useEffect(() => {
+    loadPapers();
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category]);
+
+  const currentPapers = useMemo(() => {
+    return papers.filter(p => p.category === category);
+  }, [papers, category]);
+
   const totalPages = Math.ceil(currentPapers.length / ITEMS_PER_PAGE);
   const displayedPapers = showAll ? currentPapers : currentPapers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -91,16 +115,35 @@ export default function Papers() {
     const files = e.target.files;
     if (files) {
       const newFiles: FileAttachment[] = Array.from(files).map(file => ({
-        name: file.name, type: file.name.split('.').pop() || '', size: file.size, url: URL.createObjectURL(file),
+        name: file.name,
+        type: file.name.split('.').pop() || '',
+        size: file.size,
+        url: URL.createObjectURL(file),
       }));
       setFormData({ ...formData, files: [...formData.files, ...newFiles] });
     }
   };
 
-  const removeFile = (index: number) => setFormData({ ...formData, files: formData.files.filter((_, i) => i !== index) });
-  const formatFileSize = (bytes: number) => bytes < 1024 ? bytes + ' B' : bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  const getFileIcon = (type: string) => ({ 'docx': '📄', 'doc': '📄', 'xlsx': '📊', 'xls': '📊', 'pptx': '📽️', 'ppt': '📽️', 'pdf': '📕' }[type.toLowerCase()] || '📎');
-  
+  const removeFile = (index: number) => {
+    setFormData({ ...formData, files: formData.files.filter((_, i) => i !== index) });
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'docx': case 'doc': return '📄';
+      case 'xlsx': case 'xls': return '📊';
+      case 'pptx': case 'ppt': return '📽️';
+      case 'pdf': return '📕';
+      default: return '📎';
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const downloadFile = (file: FileAttachment) => {
     if (file.url) {
       const link = document.createElement('a');
@@ -110,73 +153,154 @@ export default function Papers() {
     }
   };
 
-  const handleAdd = () => {
-    const newPaper: Paper = {
-      id: currentPapers.length > 0 ? Math.max(...currentPapers.map(p => p.id)) + 1 : 1,
-      title: formData.title, authors: formData.authors, firstAuthor: formData.firstAuthor, correspondingAuthor: formData.correspondingAuthor, websiteUrl: formData.websiteUrl,
-      year: formData.year, files: formData.files, comments: [],
-      ...(isJournal ? { journal: formData.journal, volume: formData.volume } : { venue: formData.venue }),
-    };
-    savePapers({ ...papers, [category]: [newPaper, ...currentPapers] });
-    setIsAddOpen(false);
-    setFormData({ title: "", authors: "", firstAuthor: "", correspondingAuthor: "", websiteUrl: "", venue: "", journal: "", year: "", volume: "", files: [] });
-  };
-
-  const handleEdit = () => {
-    if (!editingPaper) return;
-    const updated = { ...papers, [category]: currentPapers.map(p => p.id === editingPaper.id ? {
-      ...p, title: formData.title, authors: formData.authors, firstAuthor: formData.firstAuthor, correspondingAuthor: formData.correspondingAuthor, websiteUrl: formData.websiteUrl, year: formData.year, files: formData.files,
-      ...(isJournal ? { journal: formData.journal, volume: formData.volume } : { venue: formData.venue }),
-    } : p) };
-    savePapers(updated);
-    setIsEditOpen(false);
-    setEditingPaper(null);
-    setFormData({ title: "", authors: "", firstAuthor: "", correspondingAuthor: "", websiteUrl: "", venue: "", journal: "", year: "", volume: "", files: [] });
-  };
-
-  const handleDelete = () => {
-    if (deleteId) {
-      savePapers({ ...papers, [category]: currentPapers.filter(p => p.id !== deleteId) });
-      setDeleteId(null);
-    }
+  const openAdd = () => {
+    setFormData({ title: "", authors: "", firstAuthor: "", correspondingAuthor: "", venue: "", journal: "", volume: "", year: "", websiteUrl: "", files: [] });
+    setIsAddOpen(true);
   };
 
   const openEdit = (paper: Paper) => {
     setEditingPaper(paper);
-    setFormData({ title: paper.title, authors: paper.authors, firstAuthor: paper.firstAuthor || "", correspondingAuthor: paper.correspondingAuthor || "", websiteUrl: paper.websiteUrl || "", venue: paper.venue || "", journal: paper.journal || "", year: paper.year, volume: paper.volume || "", files: paper.files || [] });
+    setFormData({
+      title: paper.title,
+      authors: paper.authors,
+      firstAuthor: paper.firstAuthor || "",
+      correspondingAuthor: paper.correspondingAuthor || "",
+      venue: paper.venue || "",
+      journal: paper.journal || "",
+      volume: paper.volume || "",
+      year: paper.year,
+      websiteUrl: paper.websiteUrl || "",
+      files: paper.files.map(name => ({ name, type: name.split('.').pop() || '', size: 0, url: '' })),
+    });
     setIsEditOpen(true);
   };
 
-  const openView = (paper: Paper) => { setViewingPaper(paper); setIsViewOpen(true); };
-  const openAdd = () => { setFormData({ title: "", authors: "", firstAuthor: "", correspondingAuthor: "", websiteUrl: "", venue: "", journal: "", year: "", volume: "", files: [] }); setIsAddOpen(true); };
+  const openView = async (paper: Paper) => {
+    try {
+      await api.papers.incrementViews(paper.id);
+      const updated = await api.papers.get(paper.id);
+      setViewingPaper(updated);
+      setPapers(prev => prev.map(p => p.id === paper.id ? updated : p));
+      setIsViewOpen(true);
+    } catch (e) {
+      setViewingPaper(paper);
+      setIsViewOpen(true);
+    }
+  };
 
-  const addComment = () => {
+  const handleAdd = async () => {
+    try {
+      await api.papers.create({
+        category,
+        title: formData.title,
+        authors: formData.authors,
+        firstAuthor: formData.firstAuthor || null,
+        correspondingAuthor: formData.correspondingAuthor || null,
+        venue: formData.venue || null,
+        journal: formData.journal || null,
+        volume: formData.volume || null,
+        year: formData.year,
+        abstract: null,
+        keywords: [],
+        files: formData.files.map(f => f.name),
+        websiteUrl: formData.websiteUrl || null,
+        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+        views: 0,
+      });
+      await loadPapers();
+      setIsAddOpen(false);
+    } catch (e) {
+      console.error("Failed to add paper", e);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editingPaper) return;
+    try {
+      await api.papers.update(editingPaper.id, {
+        title: formData.title,
+        authors: formData.authors,
+        firstAuthor: formData.firstAuthor || null,
+        correspondingAuthor: formData.correspondingAuthor || null,
+        venue: formData.venue || null,
+        journal: formData.journal || null,
+        volume: formData.volume || null,
+        year: formData.year,
+        websiteUrl: formData.websiteUrl || null,
+        files: formData.files.map(f => f.name),
+      });
+      await loadPapers();
+      setIsEditOpen(false);
+      setEditingPaper(null);
+    } catch (e) {
+      console.error("Failed to edit paper", e);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      try {
+        await api.papers.delete(deleteId);
+        await loadPapers();
+        setDeleteId(null);
+      } catch (e) {
+        console.error("Failed to delete paper", e);
+      }
+    }
+  };
+
+  const addComment = async () => {
     if (!viewingPaper || !newComment.trim() || !commentAuthor.trim()) return;
-    const comment: Comment = { id: Date.now(), author: commentAuthor, content: newComment, date: new Date().toISOString().split('T')[0].replace(/-/g, '.') };
-    const updated = { ...papers, [category]: currentPapers.map(p => p.id === viewingPaper.id ? { ...p, comments: [...p.comments, comment] } : p) };
-    savePapers(updated);
-    setViewingPaper({ ...viewingPaper, comments: [...viewingPaper.comments, comment] });
-    setNewComment(""); setCommentAuthor("");
+    try {
+      const comment = await api.papers.addComment(viewingPaper.id, {
+        author: commentAuthor,
+        content: newComment,
+        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
+      });
+      const updated = { ...viewingPaper, comments: [...viewingPaper.comments, comment] };
+      setViewingPaper(updated);
+      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
+      setNewComment("");
+      setCommentAuthor("");
+    } catch (e) {
+      console.error("Failed to add comment", e);
+    }
   };
 
-  const startEditComment = (comment: Comment) => { setEditingCommentId(comment.id); setEditingCommentContent(comment.content); };
-  
-  const saveEditComment = () => {
+  const startEditComment = (comment: PaperComment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const saveEditComment = async () => {
     if (!viewingPaper || !editingCommentId) return;
-    const updatedComments = viewingPaper.comments.map(c => c.id === editingCommentId ? { ...c, content: editingCommentContent } : c);
-    const updated = { ...papers, [category]: currentPapers.map(p => p.id === viewingPaper.id ? { ...p, comments: updatedComments } : p) };
-    savePapers(updated);
-    setViewingPaper({ ...viewingPaper, comments: updatedComments });
-    setEditingCommentId(null); setEditingCommentContent("");
+    try {
+      await api.papers.updateComment(editingCommentId, editingCommentContent);
+      const updatedComments = viewingPaper.comments.map(c => 
+        c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
+      );
+      const updated = { ...viewingPaper, comments: updatedComments };
+      setViewingPaper(updated);
+      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+    } catch (e) {
+      console.error("Failed to update comment", e);
+    }
   };
 
-  const deleteComment = () => {
+  const deleteComment = async () => {
     if (!viewingPaper || !deleteCommentId) return;
-    const updatedComments = viewingPaper.comments.filter(c => c.id !== deleteCommentId);
-    const updated = { ...papers, [category]: currentPapers.map(p => p.id === viewingPaper.id ? { ...p, comments: updatedComments } : p) };
-    savePapers(updated);
-    setViewingPaper({ ...viewingPaper, comments: updatedComments });
-    setDeleteCommentId(null);
+    try {
+      await api.papers.deleteComment(deleteCommentId);
+      const updatedComments = viewingPaper.comments.filter(c => c.id !== deleteCommentId);
+      const updated = { ...viewingPaper, comments: updatedComments };
+      setViewingPaper(updated);
+      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
+      setDeleteCommentId(null);
+    } catch (e) {
+      console.error("Failed to delete comment", e);
+    }
   };
 
   return (
@@ -184,22 +308,24 @@ export default function Papers() {
       <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
 
       <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20"><div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.3)_0%,_transparent_50%)]" /></div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(59,130,246,0.3)_0%,_transparent_50%)]" />
+        </div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">PAPERS & PUBLICATIONS</p>
+            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">PAPERS</p>
             <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">논문</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">학과의 연구 성과와 논문을 확인하세요.</p>
+            <p className="text-blue-100 max-w-2xl text-lg">학과 연구 논문 및 학술 성과를 확인하세요.</p>
           </motion.div>
         </div>
       </section>
 
       <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
             <Tabs value={category} className="w-full lg:w-auto">
               <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto p-1 bg-white shadow-md rounded-xl">
-                {Object.keys(categoryTitles).map(cat => (
+                {(Object.keys(categoryTitles) as CategoryKey[]).map(cat => (
                   <TabsTrigger key={cat} value={cat} asChild className="rounded-lg py-2 text-xs lg:text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
                     <Link href={`/papers/${cat}`}>{categoryTitles[cat]}</Link>
                   </TabsTrigger>
@@ -223,7 +349,9 @@ export default function Papers() {
             </div>
 
             <div className="space-y-4">
-              {displayedPapers.map((paper) => (
+              {loading ? (
+                <div className="p-16 text-center text-gray-500">로딩 중...</div>
+              ) : displayedPapers.map((paper) => (
                 <Card key={paper.id} className="border-0 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden group">
                   <CardContent className="p-5 lg:p-6">
                     <div className="flex items-start gap-4">
@@ -244,7 +372,7 @@ export default function Papers() {
                           {paper.websiteUrl && <a href={paper.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />사이트</a>}
                         </div>
                         {paper.files && paper.files.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-3">{paper.files.map((file, index) => <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">{getFileIcon(file.type)} {file.name}</span>)}</div>
+                          <div className="flex flex-wrap gap-2 mt-3">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">{getFileIcon(fileName.split('.').pop() || '')} {fileName}</span>)}</div>
                         )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -255,7 +383,7 @@ export default function Papers() {
                   </CardContent>
                 </Card>
               ))}
-              {currentPapers.length === 0 && <div className="p-16 text-center text-gray-500"><BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">등록된 논문이 없습니다.</p></div>}
+              {!loading && currentPapers.length === 0 && <div className="p-16 text-center text-gray-500"><BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">등록된 논문이 없습니다.</p></div>}
             </div>
 
             {!showAll && totalPages > 1 && (
@@ -289,10 +417,10 @@ export default function Papers() {
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
                 <div className="space-y-2">
-                  {viewingPaper.files.map((file, index) => (
+                  {viewingPaper.files.map((fileName, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(file.type)}</span><span className="text-sm font-medium text-gray-700">{file.name}</span><span className="text-xs text-gray-400">{formatFileSize(file.size)}</span></div>
-                      <Button variant="ghost" size="sm" className="text-primary h-8" onClick={() => downloadFile(file)}><Download className="w-4 h-4 mr-1" />다운로드</Button>
+                      <div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(fileName.split('.').pop() || '')}</span><span className="text-sm font-medium text-gray-700">{fileName}</span></div>
+                      <Button variant="ghost" size="sm" className="text-primary h-8"><Download className="w-4 h-4 mr-1" />다운로드</Button>
                     </div>
                   ))}
                 </div>

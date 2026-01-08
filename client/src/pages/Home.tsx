@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import { getNotices } from "@/lib/dataStore";
+import { api, Notice } from "@/lib/api";
 
 const features = [
   {
@@ -45,16 +45,10 @@ const features = [
 export default function Home() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
-  const [notices, setNotices] = useState<{ id: number; title: string; date: string; views: number }[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
 
   useEffect(() => {
-    const storedNotices = getNotices();
-    setNotices(storedNotices.slice(0, 4).map((n, index) => ({
-      id: index + 1,
-      title: n.title,
-      date: n.date,
-      views: n.views
-    })));
+    api.notices.list().then(data => setNotices(data.slice(0, 4))).catch(() => {});
   }, []);
 
   return (

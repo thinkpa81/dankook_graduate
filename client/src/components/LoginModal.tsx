@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { addUser, findUserByUsername, validateUser } from "@/lib/dataStore";
+import { api } from "@/lib/api";
 
 interface LoginModalProps {
   open: boolean;
@@ -26,37 +26,39 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
   const [signupData, setSignupData] = useState({ username: "", password: "", confirmPassword: "", name: "", email: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
     if (!loginData.username || !loginData.password) {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-    const user = validateUser(loginData.username, loginData.password);
-    if (user) {
+    setLoading(true);
+    try {
+      const user = await api.users.login(loginData.username, loginData.password);
       setSuccess(`${user.name}님, 환영합니다!`);
       setTimeout(() => {
         onOpenChange(false);
         setLoginData({ username: "", password: "" });
         setSuccess("");
       }, 1500);
-    } else {
-      const existingUser = findUserByUsername(loginData.username);
-      if (!existingUser) {
-        setError("등록되지 않은 사용자입니다. 회원가입을 먼저 진행해주세요.");
-        setActiveTab("signup");
+    } catch (err: any) {
+      if (err.message === "Invalid credentials") {
+        setError("아이디 또는 비밀번호가 올바르지 않습니다.");
       } else {
-        setError("비밀번호가 올바르지 않습니다.");
+        setError("로그인 중 오류가 발생했습니다.");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setError("");
     if (!signupData.username || !signupData.password || !signupData.name || !signupData.email) {
       setError("모든 필수 항목을 입력해주세요.");
@@ -70,25 +72,34 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
       setError("비밀번호는 6자 이상이어야 합니다.");
       return;
     }
-    const existingUser = findUserByUsername(signupData.username);
-    if (existingUser) {
-      setError("이미 사용 중인 아이디입니다.");
-      return;
+    
+    setLoading(true);
+    try {
+      const now = new Date();
+      await api.users.create({
+        username: signupData.username,
+        password: signupData.password,
+        name: signupData.name,
+        email: signupData.email,
+        registeredAt: now.toISOString().split('T')[0].replace(/-/g, '.'),
+        registeredTime: now.toTimeString().slice(0, 5),
+      });
+      
+      setSuccess("회원가입이 완료되었습니다! 로그인해주세요.");
+      setTimeout(() => {
+        setActiveTab("login");
+        setSignupData({ username: "", password: "", confirmPassword: "", name: "", email: "" });
+        setSuccess("");
+      }, 1500);
+    } catch (err: any) {
+      if (err.message === "Username already exists") {
+        setError("이미 사용 중인 아이디입니다.");
+      } else {
+        setError("회원가입 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    addUser({
-      username: signupData.username,
-      password: signupData.password,
-      name: signupData.name,
-      email: signupData.email,
-    });
-    
-    setSuccess("회원가입이 완료되었습니다! 로그인해주세요.");
-    setTimeout(() => {
-      setActiveTab("login");
-      setSignupData({ username: "", password: "", confirmPassword: "", name: "", email: "" });
-      setSuccess("");
-    }, 1500);
   };
 
   return (
@@ -153,10 +164,11 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
             {success && <p className="text-sm text-green-600">{success}</p>}
             <Button 
               onClick={handleLogin} 
+              disabled={loading}
               className="w-full rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
               data-testid="button-login-submit"
             >
-              로그인
+              {loading ? "처리중..." : "로그인"}
             </Button>
           </TabsContent>
 
@@ -217,11 +229,12 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
             {error && <p className="text-sm text-destructive">{error}</p>}
             {success && <p className="text-sm text-green-600">{success}</p>}
             <Button 
-              onClick={handleSignup} 
+              onClick={handleSignup}
+              disabled={loading}
               className="w-full rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
               data-testid="button-signup-submit"
             >
-              회원가입
+              {loading ? "처리중..." : "회원가입"}
             </Button>
           </TabsContent>
         </Tabs>

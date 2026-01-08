@@ -30,19 +30,20 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-import { getTalents, setTalents, getUsers, resetUserPassword, deleteUser, TalentEntry, User as UserType } from "@/lib/dataStore";
+import { api, Talent, User as UserType } from "@/lib/api";
 
 export default function TalentPool() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [talentData, setTalentDataState] = useState<TalentEntry[]>([]);
-  const [users, setUsersState] = useState<UserType[]>([]);
+  const [talentData, setTalentData] = useState<Talent[]>([]);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState({ id: "", password: "" });
   const [loginError, setLoginError] = useState("");
-  const [editingEntry, setEditingEntry] = useState<TalentEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<Talent | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [resetUserId, setResetUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -52,57 +53,111 @@ export default function TalentPool() {
     name: "", email: "", phone: "", education: "", major: "", interestedMajor: "", motivation: "", agreePrivacy: false,
   });
 
-  useEffect(() => {
-    setTalentDataState(getTalents());
-    setUsersState(getUsers());
-  }, []);
-
-  const saveTalents = (newTalents: TalentEntry[]) => {
-    setTalentDataState(newTalents);
-    setTalents(newTalents);
+  const loadData = async () => {
+    try {
+      const [talents, usersList] = await Promise.all([
+        api.talents.list(),
+        api.users.list()
+      ]);
+      setTalentData(talents);
+      setUsers(usersList);
+    } catch (e) {
+      console.error("Failed to load data", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreePrivacy) { alert("개인정보 수집 및 이용에 동의해주세요."); return; }
     const now = new Date();
-    const newEntry: TalentEntry = {
-      id: talentData.length > 0 ? Math.max(...talentData.map(t => t.id)) + 1 : 1,
-      name: formData.name, email: formData.email, phone: formData.phone,
-      education: formData.education === 'bachelor' ? '학사 졸업(예정)' : formData.education === 'master' ? '석사 졸업(예정)' : '박사 졸업(예정)',
-      major: formData.major, interestedMajor: formData.interestedMajor === 'data-science' ? '데이터사이언스' : formData.interestedMajor === 'metaverse' ? '메타버스융합' : '둘 다',
-      motivation: formData.motivation, registeredAt: now.toISOString().split('T')[0].replace(/-/g, '.'), registeredTime: now.toTimeString().slice(0, 5),
-    };
-    saveTalents([newEntry, ...talentData]);
-    setSubmitted(true);
+    try {
+      await api.talents.create({
+        name: formData.name, 
+        email: formData.email, 
+        phone: formData.phone,
+        education: formData.education === 'bachelor' ? '학사 졸업(예정)' : formData.education === 'master' ? '석사 졸업(예정)' : '박사 졸업(예정)',
+        major: formData.major, 
+        interestedMajor: formData.interestedMajor === 'data-science' ? '데이터사이언스' : formData.interestedMajor === 'metaverse' ? '메타버스융합' : '둘 다',
+        motivation: formData.motivation, 
+        registeredAt: now.toISOString().split('T')[0].replace(/-/g, '.'), 
+        registeredTime: now.toTimeString().slice(0, 5),
+      });
+      setSubmitted(true);
+    } catch (e) {
+      console.error("Failed to submit", e);
+    }
   };
 
   const handleAdminLogin = () => {
     if (adminCredentials.id === "thinkpa" && adminCredentials.password === "audghk99**") {
-      setIsAdminLoggedIn(true); setShowAdminLogin(false); setLoginError("");
-      setUsersState(getUsers());
-    } else { setLoginError("아이디 또는 비밀번호가 올바르지 않습니다."); }
-  };
-
-  const handleLogout = () => { setIsAdminLoggedIn(false); setAdminCredentials({ id: "", password: "" }); };
-  const handleEditEntry = (entry: TalentEntry) => setEditingEntry(entry);
-  const handleSaveEdit = () => { if (!editingEntry) return; saveTalents(talentData.map(e => e.id === editingEntry.id ? editingEntry : e)); setEditingEntry(null); };
-  const handleDeleteEntry = () => { if (deleteId) { saveTalents(talentData.filter(e => e.id !== deleteId)); setDeleteId(null); } };
-
-  const handleResetPassword = () => {
-    if (resetUserId && newPassword) {
-      resetUserPassword(resetUserId, newPassword);
-      setUsersState(getUsers());
-      setResetUserId(null); setNewPassword("");
-      alert("비밀번호가 초기화되었습니다.");
+      setIsAdminLoggedIn(true); 
+      setShowAdminLogin(false); 
+      setLoginError("");
+      loadData();
+    } else { 
+      setLoginError("아이디 또는 비밀번호가 올바르지 않습니다."); 
     }
   };
 
-  const handleDeleteUser = () => {
+  const handleLogout = () => { setIsAdminLoggedIn(false); setAdminCredentials({ id: "", password: "" }); };
+  
+  const handleEditEntry = (entry: Talent) => setEditingEntry(entry);
+  
+  const handleSaveEdit = async () => { 
+    if (!editingEntry) return; 
+    try {
+      await api.talents.update(editingEntry.id, {
+        name: editingEntry.name,
+        email: editingEntry.email,
+        phone: editingEntry.phone,
+      });
+      await loadData();
+      setEditingEntry(null); 
+    } catch (e) {
+      console.error("Failed to save edit", e);
+    }
+  };
+  
+  const handleDeleteEntry = async () => { 
+    if (deleteId) { 
+      try {
+        await api.talents.delete(deleteId);
+        await loadData();
+        setDeleteId(null); 
+      } catch (e) {
+        console.error("Failed to delete", e);
+      }
+    } 
+  };
+
+  const handleResetPassword = async () => {
+    if (resetUserId && newPassword) {
+      try {
+        await api.users.resetPassword(resetUserId, newPassword);
+        setResetUserId(null); 
+        setNewPassword("");
+        alert("비밀번호가 초기화되었습니다.");
+      } catch (e) {
+        console.error("Failed to reset password", e);
+      }
+    }
+  };
+
+  const handleDeleteUser = async () => {
     if (deleteUserId) {
-      deleteUser(deleteUserId);
-      setUsersState(getUsers());
-      setDeleteUserId(null);
+      try {
+        await api.users.delete(deleteUserId);
+        await loadData();
+        setDeleteUserId(null);
+      } catch (e) {
+        console.error("Failed to delete user", e);
+      }
     }
   };
 
@@ -205,12 +260,16 @@ export default function TalentPool() {
                     </Tabs>
                   </CardHeader>
                   <CardContent className="p-0">
-                    {adminTab === "talents" ? (
+                    {loading ? (
+                      <div className="p-12 text-center text-gray-500">로딩 중...</div>
+                    ) : adminTab === "talents" ? (
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead className="bg-gray-50 border-b"><tr><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">이름</th><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">이메일</th><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">연락처</th><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">관심전공</th><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">등록일시</th><th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">관리</th></tr></thead>
                           <tbody className="divide-y divide-gray-100">
-                            {talentData.map((entry) => (
+                            {talentData.length === 0 ? (
+                              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-500">등록된 인재풀이 없습니다.</td></tr>
+                            ) : talentData.map((entry) => (
                               <tr key={entry.id} className="hover:bg-blue-50/50 transition-colors">
                                 <td className="px-4 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-blue-500/20 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-primary" /></div><span className="font-medium text-gray-900">{entry.name}</span></div></td>
                                 <td className="px-4 py-4 text-sm text-gray-600">{entry.email}</td>
