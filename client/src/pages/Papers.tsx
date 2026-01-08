@@ -205,7 +205,7 @@ export default function Papers() {
           const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
           uploadedUrls = uploaded.map(u => u.url);
         } catch (uploadError: any) {
-          toast.error(uploadError.message || "파일 업로드에 실패했습니다. 로그인 후 다시 시도해주세요.");
+          toast.error(uploadError.message || "파일 업로드에 실패했습니다.");
           return;
         }
       }
@@ -250,7 +250,7 @@ export default function Papers() {
           const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
           uploadedUrls = uploaded.map(u => u.url);
         } catch (uploadError: any) {
-          toast.error(uploadError.message || "파일 업로드에 실패했습니다. 로그인 후 다시 시도해주세요.");
+          toast.error(uploadError.message || "파일 업로드에 실패했습니다.");
           return;
         }
       }

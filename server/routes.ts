@@ -72,14 +72,6 @@ export async function registerRoutes(
   const ADMIN_USERNAME = "thinkpa";
   
   app.post("/api/upload", async (req, res, next) => {
-    if (!req.session.user) {
-      return res.status(401).json({ error: "로그인이 필요합니다" });
-    }
-    
-    if (req.session.user.username !== ADMIN_USERNAME) {
-      return res.status(403).json({ error: "관리자만 파일을 업로드할 수 있습니다" });
-    }
-    
     upload.array('files', 10)(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
