@@ -50,9 +50,19 @@ The server follows a layered architecture:
   - `talents`: Talent pool registration entries
 
 ### Authentication
-- Simple username/password authentication (passwords stored as plaintext - should be enhanced for production)
-- No session management currently implemented (stateless API)
+- Session-based authentication using express-session with memorystore
+- Secure httpOnly cookies with sameSite policy
+- Login creates server-side session, logout destroys it
+- Admin user: "thinkpa" with restricted file upload privileges
 - Login modal component handles both login and signup flows
+
+### File Upload System
+- Files uploaded to `/uploads` directory on server
+- Admin-only file uploads (authenticated via session)
+- Allowed file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, HWP, HWPX, ZIP
+- Maximum file size: 50MB
+- Files served with Content-Disposition: attachment header for proper downloads
+- File URLs stored in database for Papers and Notices
 
 ### Build System
 - Custom build script (`script/build.ts`) using esbuild for server bundling and Vite for client
