@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,47 +28,14 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
-
-interface FileAttachment {
-  name: string;
-  type: string;
-  size: number;
-  url?: string;
-}
-
-interface Comment {
-  id: number;
-  author: string;
-  content: string;
-  date: string;
-}
-
-interface Notice {
-  id: number;
-  title: string;
-  content: string;
-  date: string;
-  views: number;
-  files: FileAttachment[];
-  isImportant: boolean;
-  comments: Comment[];
-}
-
-const initialNotices: Notice[] = [
-  { id: 1, title: "2024학년도 2학기 학위논문 심사 일정 안내", content: "학위논문 심사 일정을 안내드립니다.\n\n1. 제출 기간: 2024년 1월 8일 ~ 1월 20일\n2. 심사 기간: 2024년 1월 25일 ~ 2월 5일\n3. 최종 제출: 2024년 2월 10일까지\n\n자세한 사항은 첨부파일을 참고해주세요.", date: "2024.01.05", views: 234, files: [{ name: "심사일정.docx", type: "docx", size: 245000 }], isImportant: true, comments: [] },
-  { id: 2, title: "겨울학기 수강신청 안내", content: "겨울학기 수강신청 관련 안내입니다.", date: "2024.01.03", views: 189, files: [{ name: "수강신청안내.xlsx", type: "xlsx", size: 128000 }], isImportant: true, comments: [] },
-  { id: 3, title: "대학원 장학금 신청 안내", content: "장학금 신청 안내입니다.", date: "2024.01.02", views: 156, files: [{ name: "장학금신청서.docx", type: "docx", size: 89000 }], isImportant: false, comments: [] },
-  { id: 4, title: "연구실 안전교육 이수 안내", content: "안전교육 이수 안내입니다.", date: "2023.12.28", views: 142, files: [], isImportant: false, comments: [] },
-  { id: 5, title: "2024학년도 1학기 대학원 신입생 모집 안내", content: "신입생 모집 안내입니다.", date: "2023.12.20", views: 312, files: [{ name: "모집요강.pptx", type: "pptx", size: 2450000 }], isImportant: false, comments: [] },
-  { id: 6, title: "학과 세미나 일정 안내", content: "2024년도 학과 세미나 일정입니다.", date: "2023.12.15", views: 98, files: [], isImportant: false, comments: [] },
-  { id: 7, title: "연구윤리 교육 이수 안내", content: "연구윤리 교육 이수 안내입니다.", date: "2023.12.10", views: 87, files: [], isImportant: false, comments: [] },
-];
+import { getNotices, setNotices, Notice, Comment, FileAttachment } from "@/lib/dataStore";
 
 const ITEMS_PER_PAGE = 5;
 
 export default function Notices() {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [notices, setNotices] = useState<Notice[]>(initialNotices);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [notices, setNoticesState] = useState<Notice[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -79,12 +46,24 @@ export default function Notices() {
   const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
   const [newComment, setNewComment] = useState("");
   const [commentAuthor, setCommentAuthor] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     isImportant: false,
     files: [] as FileAttachment[],
   });
+
+  useEffect(() => {
+    setNoticesState(getNotices());
+  }, []);
+
+  const saveNotices = (newNotices: Notice[]) => {
+    setNoticesState(newNotices);
+    setNotices(newNotices);
+  };
 
   const filteredNotices = notices.filter(notice =>
     notice.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -121,32 +100,26 @@ export default function Notices() {
 
   const getFileIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'docx':
-      case 'doc':
-        return '📄';
-      case 'xlsx':
-      case 'xls':
-        return '📊';
-      case 'pptx':
-      case 'ppt':
-        return '📽️';
-      case 'pdf':
-        return '📕';
-      default:
-        return '📎';
+      case 'docx': case 'doc': return '📄';
+      case 'xlsx': case 'xls': return '📊';
+      case 'pptx': case 'ppt': return '📽️';
+      case 'pdf': return '📕';
+      default: return '📎';
     }
   };
 
   const downloadFile = (file: FileAttachment) => {
-    const link = document.createElement('a');
-    link.href = file.url || '#';
-    link.download = file.name;
-    link.click();
+    if (file.url) {
+      const link = document.createElement('a');
+      link.href = file.url;
+      link.download = file.name;
+      link.click();
+    }
   };
 
   const handleAdd = () => {
     const newNotice: Notice = {
-      id: Math.max(...notices.map(n => n.id)) + 1,
+      id: notices.length > 0 ? Math.max(...notices.map(n => n.id)) + 1 : 1,
       title: formData.title,
       content: formData.content,
       date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
@@ -155,18 +128,19 @@ export default function Notices() {
       isImportant: formData.isImportant,
       comments: [],
     };
-    setNotices([newNotice, ...notices]);
+    saveNotices([newNotice, ...notices]);
     setIsAddOpen(false);
     setFormData({ title: "", content: "", isImportant: false, files: [] });
   };
 
   const handleEdit = () => {
     if (!editingNotice) return;
-    setNotices(notices.map(n => 
+    const updated = notices.map(n => 
       n.id === editingNotice.id 
         ? { ...n, title: formData.title, content: formData.content, isImportant: formData.isImportant, files: formData.files }
         : n
-    ));
+    );
+    saveNotices(updated);
     setIsEditOpen(false);
     setEditingNotice(null);
     setFormData({ title: "", content: "", isImportant: false, files: [] });
@@ -174,7 +148,7 @@ export default function Notices() {
 
   const handleDelete = () => {
     if (deleteId) {
-      setNotices(notices.filter(n => n.id !== deleteId));
+      saveNotices(notices.filter(n => n.id !== deleteId));
       setDeleteId(null);
     }
   };
@@ -191,8 +165,9 @@ export default function Notices() {
   };
 
   const openView = (notice: Notice) => {
-    setViewingNotice(notice);
-    setNotices(notices.map(n => n.id === notice.id ? { ...n, views: n.views + 1 } : n));
+    const updated = notices.map(n => n.id === notice.id ? { ...n, views: n.views + 1 } : n);
+    saveNotices(updated);
+    setViewingNotice(updated.find(n => n.id === notice.id) || notice);
     setIsViewOpen(true);
   };
 
@@ -209,35 +184,60 @@ export default function Notices() {
       content: newComment,
       date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
     };
-    setNotices(notices.map(n => 
+    const updated = notices.map(n => 
       n.id === viewingNotice.id 
         ? { ...n, comments: [...n.comments, comment] }
         : n
-    ));
+    );
+    saveNotices(updated);
     setViewingNotice({ ...viewingNotice, comments: [...viewingNotice.comments, comment] });
     setNewComment("");
     setCommentAuthor("");
   };
 
+  const startEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const saveEditComment = () => {
+    if (!viewingNotice || !editingCommentId) return;
+    const updatedComments = viewingNotice.comments.map(c => 
+      c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
+    );
+    const updated = notices.map(n => 
+      n.id === viewingNotice.id ? { ...n, comments: updatedComments } : n
+    );
+    saveNotices(updated);
+    setViewingNotice({ ...viewingNotice, comments: updatedComments });
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  };
+
+  const deleteComment = () => {
+    if (!viewingNotice || !deleteCommentId) return;
+    const updatedComments = viewingNotice.comments.filter(c => c.id !== deleteCommentId);
+    const updated = notices.map(n => 
+      n.id === viewingNotice.id ? { ...n, comments: updatedComments } : n
+    );
+    saveNotices(updated);
+    setViewingNotice({ ...viewingNotice, comments: updatedComments });
+    setDeleteCommentId(null);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
 
       <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(59,130,246,0.3)_0%,_transparent_50%)]" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">NOTICES</p>
             <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">공지사항</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">
-              학과의 주요 소식과 공지사항을 확인하세요.
-            </p>
+            <p className="text-blue-100 max-w-2xl text-lg">학과의 주요 소식과 공지사항을 확인하세요.</p>
           </motion.div>
         </div>
       </section>
@@ -255,11 +255,7 @@ export default function Notices() {
                 data-testid="input-search"
               />
             </div>
-            <Button 
-              onClick={openAdd} 
-              className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base"
-              data-testid="button-add-notice"
-            >
+            <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
               <Plus className="w-5 h-5 mr-2" />
               공지 등록
             </Button>
@@ -277,114 +273,35 @@ export default function Notices() {
             
             <CardContent className="p-0 bg-white">
               {paginatedNotices.map((notice, index) => (
-                <div 
-                  key={notice.id}
-                  className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${
-                    index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''
-                  }`}
-                >
-                  <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">
-                    {notice.id}
-                  </div>
+                <div key={notice.id} className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                  <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{notice.id}</div>
                   <div className="col-span-1 md:col-span-6 flex items-center gap-2">
-                    {notice.isImportant && (
-                      <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>
-                    )}
-                    <span 
-                      className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer text-base"
-                      onClick={() => openView(notice)}
-                      data-testid={`link-notice-${notice.id}`}
-                    >
-                      {notice.title}
-                    </span>
-                    {notice.comments.length > 0 && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <MessageSquare className="w-3 h-3" />
-                        {notice.comments.length}
-                      </span>
-                    )}
+                    {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
+                    <span className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer text-base" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</span>
+                    {notice.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{notice.comments.length}</span>}
                   </div>
-                  <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500">
-                    <Calendar className="w-4 h-4 mr-1.5 md:hidden" />
-                    {notice.date}
-                  </div>
-                  <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500">
-                    <Eye className="w-4 h-4 mr-1.5 md:hidden" />
-                    {notice.views}
-                  </div>
-                  <div className="hidden md:flex col-span-1 items-center justify-center gap-1">
-                    {notice.files.length > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <FileText className="w-4 h-4 text-primary" />
-                        {notice.files.length}
-                      </span>
-                    )}
-                  </div>
+                  <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500"><Calendar className="w-4 h-4 mr-1.5 md:hidden" />{notice.date}</div>
+                  <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500"><Eye className="w-4 h-4 mr-1.5 md:hidden" />{notice.views}</div>
+                  <div className="hidden md:flex col-span-1 items-center justify-center gap-1">{notice.files.length > 0 && <span className="flex items-center gap-1 text-xs text-gray-500"><FileText className="w-4 h-4 text-primary" />{notice.files.length}</span>}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => openEdit(notice)}
-                      data-testid={`button-edit-${notice.id}`}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setDeleteId(notice.id)}
-                      data-testid={`button-delete-${notice.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(notice)}><Pencil className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteId(notice.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               ))}
-
               {filteredNotices.length === 0 && (
-                <div className="p-16 text-center text-gray-500">
-                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-base">검색 결과가 없습니다.</p>
-                </div>
+                <div className="p-16 text-center text-gray-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">검색 결과가 없습니다.</p></div>
               )}
             </CardContent>
           </Card>
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-8">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-                className="rounded-lg" 
-                data-testid="button-prev"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+              <Button variant="outline" size="icon" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="rounded-lg"><ChevronLeft className="w-4 h-4" /></Button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <Button 
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  className="rounded-lg w-10 h-10"
-                  onClick={() => setCurrentPage(page)}
-                  data-testid={`button-page-${page}`}
-                >
-                  {page}
-                </Button>
+                <Button key={page} variant={currentPage === page ? "default" : "outline"} className="rounded-lg w-10 h-10" onClick={() => setCurrentPage(page)}>{page}</Button>
               ))}
-              <Button 
-                variant="outline" 
-                size="icon" 
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="rounded-lg" 
-                data-testid="button-next"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              <Button variant="outline" size="icon" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="rounded-lg"><ChevronRight className="w-4 h-4" /></Button>
             </div>
           )}
         </div>
@@ -400,10 +317,7 @@ export default function Notices() {
             </div>
           </DialogHeader>
           <div className="space-y-6 mt-4">
-            <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]">
-              <p className="text-gray-700 whitespace-pre-wrap text-base">{viewingNotice?.content}</p>
-            </div>
-
+            <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]"><p className="text-gray-700 whitespace-pre-wrap text-base">{viewingNotice?.content}</p></div>
             {viewingNotice?.files && viewingNotice.files.length > 0 && (
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
@@ -415,56 +329,46 @@ export default function Notices() {
                         <span className="text-sm font-medium text-gray-700">{file.name}</span>
                         <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-primary h-8"
-                        onClick={() => downloadFile(file)}
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        다운로드
+                      <Button variant="ghost" size="sm" className="text-primary h-8" onClick={() => downloadFile(file)}>
+                        <Download className="w-4 h-4 mr-1" />다운로드
                       </Button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
             <div className="border-t pt-6">
-              <Label className="font-bold flex items-center gap-2 mb-4 text-base">
-                <MessageSquare className="w-4 h-4" />
-                댓글 ({viewingNotice?.comments.length || 0})
-              </Label>
-              
+              <Label className="font-bold flex items-center gap-2 mb-4 text-base"><MessageSquare className="w-4 h-4" />댓글 ({viewingNotice?.comments.length || 0})</Label>
               {viewingNotice?.comments.map((comment) => (
                 <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-sm">{comment.author}</span>
-                    <span className="text-xs text-gray-400">{comment.date}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{comment.content}</p>
+                  {editingCommentId === comment.id ? (
+                    <div className="space-y-2">
+                      <Input value={editingCommentContent} onChange={(e) => setEditingCommentContent(e.target.value)} className="h-10 rounded-lg" />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveEditComment} className="rounded-lg">저장</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)} className="rounded-lg">취소</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm">{comment.author}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{comment.date}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600">{comment.content}</p>
+                    </>
+                  )}
                 </div>
               ))}
-
               <div className="space-y-2 mt-4">
-                <Input
-                  placeholder="이름을 입력하세요"
-                  value={commentAuthor}
-                  onChange={(e) => setCommentAuthor(e.target.value)}
-                  className="h-10 rounded-lg text-base"
-                  data-testid="input-comment-author"
-                />
+                <Input placeholder="이름을 입력하세요" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} className="h-10 rounded-lg text-base" />
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="댓글을 입력하세요..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="h-11 rounded-lg text-base"
-                    data-testid="input-comment"
-                  />
-                  <Button onClick={addComment} className="rounded-lg px-4 h-11" data-testid="button-add-comment">
-                    <Send className="w-4 h-4" />
-                  </Button>
+                  <Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" />
+                  <Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button>
                 </div>
               </div>
             </div>
@@ -480,43 +384,20 @@ export default function Notices() {
           </DialogHeader>
           <div className="space-y-5 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="title" className="font-bold text-base">제목</Label>
-              <Input
-                id="title"
-                placeholder="공지사항 제목을 입력하세요"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-lg text-base"
-                data-testid="input-notice-title"
-              />
+              <Label className="font-bold text-base">제목</Label>
+              <Input placeholder="공지사항 제목을 입력하세요" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="content" className="font-bold text-base">내용</Label>
-              <Textarea
-                id="content"
-                placeholder="공지사항 내용을 입력하세요"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[120px] rounded-lg text-base"
-                data-testid="textarea-notice-content"
-              />
+              <Label className="font-bold text-base">내용</Label>
+              <Textarea placeholder="공지사항 내용을 입력하세요" value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} className="min-h-[120px] rounded-lg text-base" />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold text-base">첨부파일 (Word, Excel, PowerPoint, PDF)</Label>
+              <Label className="font-bold text-base">첨부파일</Label>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  data-testid="input-file-upload"
-                />
+                <input type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" onChange={handleFileChange} className="hidden" id="file-upload" />
                 <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
                   <Upload className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
-                  <span className="text-xs text-gray-400">.doc, .docx, .xls, .xlsx, .ppt, .pptx, .pdf</span>
                 </label>
               </div>
               {formData.files.length > 0 && (
@@ -526,37 +407,20 @@ export default function Notices() {
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{getFileIcon(file.type)}</span>
                         <span className="text-sm font-medium">{file.name}</span>
-                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6"
-                        onClick={() => removeFile(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
-                id="important"
-                checked={formData.isImportant}
-                onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
-                data-testid="checkbox-important"
-              />
+              <Checkbox id="important" checked={formData.isImportant} onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })} />
               <Label htmlFor="important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-12 text-base">
-                취소
-              </Button>
-              <Button onClick={handleAdd} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base" data-testid="button-submit-notice">
-                등록
-              </Button>
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-12 text-base">취소</Button>
+              <Button onClick={handleAdd} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">등록</Button>
             </div>
           </div>
         </DialogContent>
@@ -570,36 +434,17 @@ export default function Notices() {
           </DialogHeader>
           <div className="space-y-5 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title" className="font-bold text-base">제목</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-12 rounded-lg text-base"
-                data-testid="input-edit-title"
-              />
+              <Label className="font-bold text-base">제목</Label>
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-content" className="font-bold text-base">내용</Label>
-              <Textarea
-                id="edit-content"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[120px] rounded-lg text-base"
-                data-testid="textarea-edit-content"
-              />
+              <Label className="font-bold text-base">내용</Label>
+              <Textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} className="min-h-[120px] rounded-lg text-base" />
             </div>
             <div className="space-y-2">
               <Label className="font-bold text-base">첨부파일</Label>
               <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload-edit"
-                />
+                <input type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" onChange={handleFileChange} className="hidden" id="file-upload-edit" />
                 <label htmlFor="file-upload-edit" className="cursor-pointer flex flex-col items-center gap-2">
                   <Upload className="w-8 h-8 text-gray-400" />
                   <span className="text-sm text-gray-500">클릭하여 파일 업로드</span>
@@ -612,36 +457,20 @@ export default function Notices() {
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{getFileIcon(file.type)}</span>
                         <span className="text-sm font-medium">{file.name}</span>
-                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6"
-                        onClick={() => removeFile(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-important"
-                checked={formData.isImportant}
-                onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })}
-              />
+              <Checkbox id="edit-important" checked={formData.isImportant} onCheckedChange={(checked) => setFormData({ ...formData, isImportant: checked as boolean })} />
               <Label htmlFor="edit-important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-12 text-base">
-                취소
-              </Button>
-              <Button onClick={handleEdit} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base" data-testid="button-update-notice">
-                수정
-              </Button>
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-12 text-base">취소</Button>
+              <Button onClick={handleEdit} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">수정</Button>
             </div>
           </div>
         </DialogContent>
@@ -650,22 +479,32 @@ export default function Notices() {
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg">공지사항을 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">
-              이 작업은 되돌릴 수 없습니다. 공지사항이 영구적으로 삭제됩니다.
-            </AlertDialogDescription>
+            <AlertDialogTitle>공지사항을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-lg" data-testid="button-confirm-delete">
-              삭제
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteCommentId !== null} onOpenChange={() => setDeleteCommentId(null)}>
+        <AlertDialogContent className="rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>댓글을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteComment} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
+      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }
