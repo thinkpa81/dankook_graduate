@@ -368,17 +368,10 @@ export class DatabaseStorage implements IStorage {
 let storage: IStorage;
 
 export async function initializeStorage(): Promise<IStorage> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    console.log("No DATABASE_URL found, using memory storage");
-    storage = new MemoryStorage();
-    return storage;
-  }
-
-  if (databaseUrl.includes('helium') && isProduction) {
-    console.log("Production environment with internal hostname detected, using memory storage");
+    console.log("No database URL found, using memory storage");
     storage = new MemoryStorage();
     return storage;
   }

@@ -4,16 +4,18 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Use DATABASE_URL environment variable for database connection
-// In production, this should be set to the production database connection string
-if (!process.env.DATABASE_URL) {
+// Use NEON_DATABASE_URL for external Neon database, fallback to DATABASE_URL for development
+const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "DATABASE_URL or NEON_DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
 const poolConfig: pg.PoolConfig = {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
+  ssl: process.env.NEON_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
