@@ -44,6 +44,8 @@ export default function Notices() {
   const [signupOpen, setSignupOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -65,11 +67,13 @@ export default function Notices() {
   });
 
   const loadNotices = async () => {
+    setError(null);
     try {
       const data = await api.notices.list();
       setNotices(data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to load notices", e);
+      setError("공지사항을 불러오는데 실패했습니다: " + (e.message || "알 수 없는 오류"));
     } finally {
       setLoading(false);
     }
@@ -132,6 +136,11 @@ export default function Notices() {
   };
 
   const handleAdd = async () => {
+    if (!formData.title.trim()) {
+      alert("제목을 입력해주세요.");
+      return;
+    }
+    setSaving(true);
     try {
       await api.notices.create({
         title: formData.title,
@@ -144,13 +153,17 @@ export default function Notices() {
       await loadNotices();
       setIsAddOpen(false);
       setFormData({ title: "", content: "", isImportant: false, files: [] });
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to add notice", e);
+      alert("공지사항 등록에 실패했습니다: " + (e.message || "서버 오류"));
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEdit = async () => {
     if (!editingNotice) return;
+    setSaving(true);
     try {
       await api.notices.update(editingNotice.id, {
         title: formData.title,
@@ -162,8 +175,11 @@ export default function Notices() {
       setIsEditOpen(false);
       setEditingNotice(null);
       setFormData({ title: "", content: "", isImportant: false, files: [] });
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to edit notice", e);
+      alert("공지사항 수정에 실패했습니다: " + (e.message || "서버 오류"));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -173,8 +189,9 @@ export default function Notices() {
         await api.notices.delete(deleteId);
         await loadNotices();
         setDeleteId(null);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to delete notice", e);
+        alert("공지사항 삭제에 실패했습니다: " + (e.message || "서버 오류"));
       }
     }
   };
@@ -330,7 +347,10 @@ export default function Notices() {
                   </div>
                 </div>
               )})}
-              {!loading && filteredNotices.length === 0 && (
+              {!loading && error && (
+                <div className="p-16 text-center text-red-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">{error}</p></div>
+              )}
+              {!loading && !error && filteredNotices.length === 0 && (
                 <div className="p-16 text-center text-gray-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">검색 결과가 없습니다.</p></div>
               )}
             </CardContent>
@@ -459,8 +479,8 @@ export default function Notices() {
               <Label htmlFor="important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-12 text-base">취소</Button>
-              <Button onClick={handleAdd} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">등록</Button>
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saving} className="flex-1 rounded-lg h-12 text-base">취소</Button>
+              <Button onClick={handleAdd} disabled={saving} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">{saving ? "등록 중..." : "등록"}</Button>
             </div>
           </div>
         </DialogContent>
@@ -509,8 +529,8 @@ export default function Notices() {
               <Label htmlFor="edit-important" className="cursor-pointer text-base">중요 공지로 등록</Label>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-12 text-base">취소</Button>
-              <Button onClick={handleEdit} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">수정</Button>
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving} className="flex-1 rounded-lg h-12 text-base">취소</Button>
+              <Button onClick={handleEdit} disabled={saving} className="flex-1 rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">{saving ? "수정 중..." : "수정"}</Button>
             </div>
           </div>
         </DialogContent>
