@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, GraduationCap, FileText, CheckCircle } from "lucide-react";
+import { User, Mail, Phone, GraduationCap, FileText, CheckCircle, Sparkles, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,16 +39,23 @@ export default function TalentPool() {
     <div className="min-h-screen flex flex-col">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
-      <section className="hero-gradient text-white py-16 lg:py-20">
-        <div className="container mx-auto px-4">
+      <section className="hero-gradient hero-pattern text-white py-20 lg:py-24 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-20 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-blue-200 mb-2">Talent Pool Registration</p>
-            <h1 className="text-3xl lg:text-4xl font-bold mb-4">인재풀 등록</h1>
-            <p className="text-blue-100 max-w-2xl">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span className="text-sm font-medium text-blue-100">Talent Pool Registration</span>
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-black mb-4">인재풀 등록</h1>
+            <p className="text-blue-100 max-w-2xl text-lg">
               진학에 관심 있는 분들의 정보를 등록해주세요. 
               입학 관련 정보를 받아보실 수 있습니다.
             </p>
@@ -64,19 +71,24 @@ export default function TalentPool() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-12 text-center">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle className="w-10 h-10 text-green-600" />
+              <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
+                <CardContent className="p-12 lg:p-16 text-center">
+                  <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                    <CheckCircle className="w-12 h-12 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold text-foreground mb-4">
+                  <h2 className="text-3xl font-black text-foreground mb-4">
                     등록이 완료되었습니다
                   </h2>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-muted-foreground mb-8 text-lg">
                     인재풀 등록이 성공적으로 완료되었습니다.<br />
                     입학 관련 정보가 있을 경우 등록하신 이메일로 안내드리겠습니다.
                   </p>
-                  <Button onClick={() => setSubmitted(false)} data-testid="button-register-again">
+                  <Button 
+                    onClick={() => setSubmitted(false)} 
+                    size="lg"
+                    className="rounded-full px-8 h-14 font-bold"
+                    data-testid="button-register-again"
+                  >
                     다시 등록하기
                   </Button>
                 </CardContent>
@@ -88,24 +100,31 @@ export default function TalentPool() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-2xl">진학 관심 인재풀 등록</CardTitle>
-                  <CardDescription>
-                    아래 양식을 작성하여 인재풀에 등록해주세요.
-                  </CardDescription>
+              <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
+                <CardHeader className="p-8 pb-0">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <Users className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold">진학 관심 인재풀 등록</CardTitle>
+                      <CardDescription className="text-base">
+                        아래 양식을 작성하여 인재풀에 등록해주세요.
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-8">
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid sm:grid-cols-2 gap-5">
                       <div className="space-y-2">
-                        <Label htmlFor="name">이름 *</Label>
+                        <Label htmlFor="name" className="text-base font-semibold">이름 *</Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input
                             id="name"
                             placeholder="홍길동"
-                            className="pl-10"
+                            className="pl-12 h-14 rounded-xl text-base"
                             required
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -114,14 +133,14 @@ export default function TalentPool() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">연락처 *</Label>
+                        <Label htmlFor="phone" className="text-base font-semibold">연락처 *</Label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input
                             id="phone"
                             type="tel"
                             placeholder="010-1234-5678"
-                            className="pl-10"
+                            className="pl-12 h-14 rounded-xl text-base"
                             required
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -132,14 +151,14 @@ export default function TalentPool() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email">이메일 *</Label>
+                      <Label htmlFor="email" className="text-base font-semibold">이메일 *</Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="email"
                           type="email"
                           placeholder="example@email.com"
-                          className="pl-10"
+                          className="pl-12 h-14 rounded-xl text-base"
                           required
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -148,14 +167,14 @@ export default function TalentPool() {
                       </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid sm:grid-cols-2 gap-5">
                       <div className="space-y-2">
-                        <Label htmlFor="education">최종학력 *</Label>
+                        <Label htmlFor="education" className="text-base font-semibold">최종학력 *</Label>
                         <Select 
                           required
                           onValueChange={(value) => setFormData({ ...formData, education: value })}
                         >
-                          <SelectTrigger data-testid="select-education">
+                          <SelectTrigger className="h-14 rounded-xl text-base" data-testid="select-education">
                             <SelectValue placeholder="선택해주세요" />
                           </SelectTrigger>
                           <SelectContent>
@@ -166,13 +185,13 @@ export default function TalentPool() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="major">학부 전공 *</Label>
+                        <Label htmlFor="major" className="text-base font-semibold">학부 전공 *</Label>
                         <div className="relative">
-                          <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <Input
                             id="major"
                             placeholder="컴퓨터공학"
-                            className="pl-10"
+                            className="pl-12 h-14 rounded-xl text-base"
                             required
                             value={formData.major}
                             onChange={(e) => setFormData({ ...formData, major: e.target.value })}
@@ -183,12 +202,12 @@ export default function TalentPool() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="interestedMajor">관심 전공 *</Label>
+                      <Label htmlFor="interestedMajor" className="text-base font-semibold">관심 전공 *</Label>
                       <Select 
                         required
                         onValueChange={(value) => setFormData({ ...formData, interestedMajor: value })}
                       >
-                        <SelectTrigger data-testid="select-interested-major">
+                        <SelectTrigger className="h-14 rounded-xl text-base" data-testid="select-interested-major">
                           <SelectValue placeholder="선택해주세요" />
                         </SelectTrigger>
                         <SelectContent>
@@ -200,13 +219,13 @@ export default function TalentPool() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="motivation">지원 동기</Label>
+                      <Label htmlFor="motivation" className="text-base font-semibold">지원 동기</Label>
                       <div className="relative">
-                        <FileText className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                        <FileText className="absolute left-4 top-4 w-5 h-5 text-muted-foreground" />
                         <Textarea
                           id="motivation"
                           placeholder="지원 동기 및 연구 관심 분야를 작성해주세요."
-                          className="pl-10 min-h-[120px]"
+                          className="pl-12 min-h-[140px] rounded-xl text-base pt-4"
                           value={formData.motivation}
                           onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
                           data-testid="textarea-motivation"
@@ -214,23 +233,24 @@ export default function TalentPool() {
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-start space-x-4 p-5 bg-gradient-to-r from-primary/5 to-transparent rounded-2xl border border-primary/10">
                       <Checkbox
                         id="privacy"
                         checked={formData.agreePrivacy}
                         onCheckedChange={(checked) => 
                           setFormData({ ...formData, agreePrivacy: checked as boolean })
                         }
+                        className="mt-0.5"
                         data-testid="checkbox-privacy"
                       />
                       <div className="grid gap-1.5 leading-none">
                         <label
                           htmlFor="privacy"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          className="text-base font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
                           개인정보 수집 및 이용 동의 (필수)
                         </label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           수집된 개인정보는 인재풀 관리 및 입학 안내 목적으로만 사용되며, 
                           목적 달성 후 지체없이 파기됩니다.
                         </p>
@@ -239,7 +259,7 @@ export default function TalentPool() {
 
                     <Button 
                       type="submit" 
-                      className="w-full font-semibold"
+                      className="w-full font-bold rounded-xl h-14 text-base shadow-lg"
                       size="lg"
                       data-testid="button-submit"
                     >
