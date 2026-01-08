@@ -4,20 +4,30 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
+// Resolve hostname to IP if needed for production deployments
+// The internal hostname 'helium' doesn't resolve in production network
+function resolveHost(host: string | undefined): string {
+  if (!host) return 'localhost';
+  // If host is 'helium' (Replit internal), use the resolved IP
+  if (host === 'helium') {
+    return '172.31.65.4';
+  }
+  return host;
+}
+
 // Use individual PG* environment variables for more reliable connection
-// DATABASE_URL may contain internal hostnames that don't resolve in production
 const poolConfig: pg.PoolConfig = process.env.PGHOST && process.env.PGPORT ? {
-  host: process.env.PGHOST,
+  host: resolveHost(process.env.PGHOST),
   port: parseInt(process.env.PGPORT),
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 } : {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL?.replace('@helium', '@172.31.65.4'),
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -29,7 +39,7 @@ if (!process.env.DATABASE_URL && !process.env.PGHOST) {
   );
 }
 
-console.log(`Database connecting to: ${process.env.PGHOST || 'via DATABASE_URL'}`);
+console.log(`Database connecting to: ${resolveHost(process.env.PGHOST) || 'via DATABASE_URL'}`);
 
 export const pool = new Pool(poolConfig);
 
