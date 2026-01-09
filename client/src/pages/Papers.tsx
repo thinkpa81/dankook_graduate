@@ -39,15 +39,14 @@ interface FileAttachment {
   file?: File;
 }
 
-type CategoryKey = "domestic-conference" | "international-conference" | "domestic-journal" | "international-journal" | "main-journal" | "paper-review";
+type CategoryKey = "domestic-conference" | "international-conference" | "domestic-journal" | "international-journal" | "main-journal";
 
 const categoryTitles: Record<CategoryKey, string> = {
   "domestic-conference": "국내 학술대회",
   "international-conference": "국제 학술대회",
   "domestic-journal": "국내 저널",
   "international-journal": "국제 저널",
-  "main-journal": "주요 저널",
-  "paper-review": "논문 심사",
+  "main-journal": "본 심사",
 };
 
 const categoryColors: Record<CategoryKey, string> = {
@@ -56,7 +55,6 @@ const categoryColors: Record<CategoryKey, string> = {
   "domestic-journal": "from-emerald-500 to-teal-500",
   "international-journal": "from-orange-500 to-amber-500",
   "main-journal": "from-rose-500 to-pink-500",
-  "paper-review": "from-indigo-500 to-blue-500",
 };
 
 const ITEMS_PER_PAGE = 5;
@@ -196,6 +194,10 @@ export default function Papers() {
   };
 
   const handleAdd = async () => {
+    if (!formData.title.trim()) {
+      toast.error("논문 제목을 입력해주세요.");
+      return;
+    }
     try {
       const newFiles = formData.files.filter(f => f.file);
       let uploadedUrls: string[] = [];

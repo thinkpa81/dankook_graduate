@@ -275,9 +275,9 @@ export default function About() {
             viewport={{ once: true }}
             className="text-center mb-10"
           >
-            <p className="text-primary font-semibold text-base mb-1">FACULTY</p>
+            <p className="text-primary font-semibold text-base mb-1">ADVISOR</p>
             <h2 className="text-3xl lg:text-4xl font-black text-gray-900 mb-6">
-              교수진
+              지도교수
             </h2>
           </motion.div>
 

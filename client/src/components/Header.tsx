@@ -27,8 +27,7 @@ const navItems = [
       { title: "해외 학술대회", href: "/papers/international-conference" },
       { title: "국내 저널", href: "/papers/domestic-journal" },
       { title: "해외 저널", href: "/papers/international-journal" },
-      { title: "본 저널", href: "/papers/main-journal" },
-      { title: "논문리뷰", href: "/papers/paper-review" },
+      { title: "본 심사", href: "/papers/main-journal" },
     ]
   },
   { title: "학과 내규", href: "/regulations" },
