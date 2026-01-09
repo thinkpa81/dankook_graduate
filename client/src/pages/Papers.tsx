@@ -43,9 +43,9 @@ type CategoryKey = "domestic-conference" | "international-conference" | "domesti
 
 const categoryTitles: Record<CategoryKey, string> = {
   "domestic-conference": "국내 학술대회",
-  "international-conference": "국제 학술대회",
-  "domestic-journal": "국내 저널",
-  "international-journal": "국제 저널",
+  "international-conference": "해외 학술대회",
+  "domestic-journal": "국내저널",
+  "international-journal": "해외저널",
   "main-journal": "본 심사",
 };
 
