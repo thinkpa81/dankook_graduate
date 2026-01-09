@@ -33,6 +33,7 @@ const navItems = [
   },
   { title: "학과 내규", href: "/regulations" },
   { title: "인재풀 등록", href: "/talent-pool" },
+  { title: "자료", href: "https://drive.google.com/drive/folders/1WoLoXcT7wRbpyxldRxXyyMKYTuZR0k4L?usp=drive_link", external: true },
 ];
 
 export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
@@ -94,6 +95,17 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : (item as any).external ? (
+                <Button 
+                  key={item.title}
+                  variant="ghost" 
+                  asChild
+                  className="font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 text-base text-gray-700 hover:text-primary hover:bg-gray-50"
+                >
+                  <a href={item.href} target="_blank" rel="noopener noreferrer" data-testid={`nav-${item.title}`}>
+                    {item.title}
+                  </a>
+                </Button>
               ) : (
                 <Button 
                   key={item.title}
@@ -141,18 +153,35 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
                 <div className="flex flex-col gap-2">
                   {navItems.map((item) => (
                     <div key={item.title}>
-                      <Link 
-                        href={item.href} 
-                        onClick={() => setMobileOpen(false)}
-                        data-testid={`mobile-nav-${item.title}`}
-                      >
-                        <Button 
-                          variant="ghost" 
-                          className={`w-full justify-start font-semibold text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/5' : ''}`}
+                      {(item as any).external ? (
+                        <a 
+                          href={item.href} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setMobileOpen(false)}
+                          data-testid={`mobile-nav-${item.title}`}
                         >
-                          {item.title}
-                        </Button>
-                      </Link>
+                          <Button 
+                            variant="ghost" 
+                            className="w-full justify-start font-semibold text-lg rounded-xl"
+                          >
+                            {item.title}
+                          </Button>
+                        </a>
+                      ) : (
+                        <Link 
+                          href={item.href} 
+                          onClick={() => setMobileOpen(false)}
+                          data-testid={`mobile-nav-${item.title}`}
+                        >
+                          <Button 
+                            variant="ghost" 
+                            className={`w-full justify-start font-semibold text-lg rounded-xl ${location === item.href ? 'text-primary bg-primary/5' : ''}`}
+                          >
+                            {item.title}
+                          </Button>
+                        </Link>
+                      )}
                       {item.children && (
                         <div className="ml-4 mt-1 flex flex-col gap-1">
                           {item.children.map((child) => (
