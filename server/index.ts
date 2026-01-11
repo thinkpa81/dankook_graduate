@@ -93,7 +93,10 @@ app.use((req, res, next) => {
   try {
     await initializeStorage();
   } catch (error) {
-    console.error("Failed to initialize storage:", error);
+    console.error("❌ CRITICAL ERROR: Failed to initialize storage:", error);
+    console.error("❌ Server cannot start without database connection!");
+    console.error("❌ Please check DATABASE_URL or NEON_DATABASE_URL environment variable");
+    process.exit(1); // 서버 종료
   }
 
   await registerRoutes(httpServer, app);

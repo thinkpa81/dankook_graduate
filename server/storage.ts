@@ -517,21 +517,21 @@ export async function initializeStorage(): Promise<IStorage> {
   const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!databaseUrl) {
-    console.log("No database URL found, using memory storage");
-    storage = new MemoryStorage();
-    return storage;
+    const errorMsg = "CRITICAL: DATABASE_URL or NEON_DATABASE_URL must be set. Cannot start server without database!";
+    console.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   try {
     const { db, ensureTablesExist } = await import("./db");
     await ensureTablesExist();
     storage = new DatabaseStorage(db);
-    console.log("Database storage initialized successfully");
+    console.log("✅ Database storage initialized successfully - All data will be saved to Neon PostgreSQL");
     return storage;
   } catch (error: any) {
-    console.error("Failed to initialize database, falling back to memory storage:", error.message);
-    storage = new MemoryStorage();
-    return storage;
+    console.error("❌ CRITICAL: Failed to initialize database:", error.message);
+    console.error("❌ Cannot start server without database connection!");
+    throw error; // 메모리 스토리지로 폴백하지 않고 에러 발생
   }
 }
 

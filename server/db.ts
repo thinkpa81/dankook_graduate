@@ -4,18 +4,18 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Use DATABASE_URL for database connection
-const databaseUrl = process.env.DATABASE_URL;
+// Use DATABASE_URL or NEON_DATABASE_URL for database connection
+const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "DATABASE_URL or NEON_DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
 const poolConfig: pg.PoolConfig = {
   connectionString: databaseUrl,
-  ssl: undefined,
+  ssl: databaseUrl.includes('neon.tech') ? { rejectUnauthorized: false } : undefined,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
