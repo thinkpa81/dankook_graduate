@@ -4,12 +4,18 @@ import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { randomBytes } from "crypto";
 import { initializeStorage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
 
 const MemoryStoreSession = MemoryStore(session);
+const sessionSecret = process.env.SESSION_SECRET ?? (
+  process.env.NODE_ENV === "production"
+    ? (() => { throw new Error("SESSION_SECRET is required in production"); })()
+    : randomBytes(32).toString("hex")
+);
 
 declare module "http" {
   interface IncomingMessage {
@@ -36,6 +42,13 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
 app.use(session({
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
@@ -48,7 +61,7 @@ app.use(session({
   }),
   resave: false,
   saveUninitialized: false,
-  secret: process.env.SESSION_SECRET || 'dku-dkse-session-secret-2025'
+  secret: sessionSecret
 }));
 
 export function log(message: string, source = "express") {
