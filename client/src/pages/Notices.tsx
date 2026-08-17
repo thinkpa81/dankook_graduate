@@ -28,6 +28,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
+import PageHero from "@/components/PageHero";
 import { api, Notice, NoticeComment } from "@/lib/api";
 
 interface FileAttachment {
@@ -311,18 +312,14 @@ export default function Notices() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
 
-      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(59,130,246,0.3)_0%,_transparent_50%)]" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">NOTICES</p>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">공지사항</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">학과의 주요 소식과 공지사항을 확인하세요.</p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="NOTICES"
+        title="공지사항"
+        description="학과의 주요 소식과 공지사항을 확인하세요."
+        imageSrc="/page-hero-notices.jpg"
+        objectPosition="50% 50%"
+        overlayClassName="bg-[#071B33]/68"
+      />
 
       <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4">
