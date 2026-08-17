@@ -36,11 +36,15 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
-  console.log("pushing database schema...");
-  try {
-    execSync("npm run db:push", { stdio: "inherit" });
-  } catch (error) {
-    console.error("Warning: Failed to push database schema:", error);
+  if (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL) {
+    console.log("pushing database schema...");
+    try {
+      execSync("npm run db:push", { stdio: "inherit" });
+    } catch (error) {
+      console.error("Warning: Failed to push database schema:", error);
+    }
+  } else {
+    console.log("skipping database schema push (no database URL configured)");
   }
 
   console.log("building client...");
