@@ -11,6 +11,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
+import PageHero from "@/components/PageHero";
 
 const regulations = [
   {
@@ -160,24 +161,14 @@ export default function Regulations() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
-      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(59,130,246,0.3)_0%,_transparent_50%)]" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">REGULATIONS</p>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">학과 내규</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">
-              대학원 데이터지식서비스공학과 운영 내규
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="REGULATIONS"
+        title="학과 내규"
+        description="대학원 데이터지식서비스공학과 운영 내규"
+        imageSrc="/page-hero-regulations.jpg"
+        objectPosition="53% 48%"
+        overlayClassName="bg-[#071B33]/64"
+      />
 
       <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4 max-w-4xl">

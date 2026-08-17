@@ -30,6 +30,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
+import PageHero from "@/components/PageHero";
 import { api, Talent, User as UserType } from "@/lib/api";
 
 export default function TalentPool() {
@@ -173,16 +174,14 @@ export default function TalentPool() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
 
-      <section className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-16 lg:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20"><div className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(59,130,246,0.4)_0%,_transparent_60%)]" /></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <p className="text-cyan-400 font-semibold mb-2 text-base tracking-wide">TALENT POOL</p>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4 text-white">인재풀 등록</h1>
-            <p className="text-blue-100 max-w-2xl text-lg">진학에 관심 있는 분들의 정보를 등록해주세요.</p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="TALENT POOL"
+        title="인재풀 등록"
+        description="진학에 관심 있는 분들의 정보를 등록해주세요."
+        imageSrc="/page-hero-talent-pool.jpg"
+        objectPosition="50% 50%"
+        overlayClassName="bg-[#071B33]/62"
+      />
 
       <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4 max-w-5xl">
