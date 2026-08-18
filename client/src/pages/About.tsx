@@ -38,6 +38,113 @@ const coreCourses = [
   "경영의사결정론"
 ];
 
+const advisorResearchInterests = [
+  "Artificial Intelligence",
+  "Metaverse",
+  "Smart City",
+  "M&A, PMI",
+  "Interface design for e-business",
+  "Computer-mediated communication",
+  "IT management",
+  "Design thinking",
+  "CSCL (Computer Supported Collaborative Learning)",
+  "MOOC",
+];
+
+function AdvisorSection() {
+  return (
+    <section className="bg-gray-50 py-12 lg:py-16" aria-labelledby="advisor-heading">
+      <div className="container mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-10 text-center"
+        >
+          <p className="mb-1 text-base font-semibold text-primary">ADVISOR</p>
+          <h2 id="advisor-heading" className="text-3xl font-black text-gray-900 lg:text-4xl">
+            지도교수
+          </h2>
+        </motion.div>
+
+        <Card
+          className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
+          data-testid="advisor-profile"
+        >
+          <CardContent className="p-0">
+            <div className="grid md:grid-cols-[260px_minmax(0,1fr)]">
+              <div className="flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8 md:items-start md:pt-28 lg:px-10">
+                <img
+                  src="/portrait_transparent.png"
+                  alt="서응교 지도교수"
+                  className="h-44 w-44 object-contain sm:h-48 sm:w-48"
+                  width="210"
+                  height="196"
+                  loading="eager"
+                  decoding="async"
+                  data-testid="advisor-portrait"
+                />
+              </div>
+
+              <div className="p-7 sm:p-8 lg:p-10">
+                <p className="mb-2 text-sm font-bold tracking-wide text-primary">지도교수</p>
+                <h3 className="text-2xl font-black text-gray-900 sm:text-3xl">서응교 교수</h3>
+
+                <div className="mt-5 flex items-start gap-2.5 text-base text-slate-600">
+                  <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                  <span>단국대학교 대학원 데이터지식서비스공학과</span>
+                </div>
+
+                <div className="mt-7 border-t border-slate-200 pt-6">
+                  <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
+                  <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="서응교 교수 연구관심분야">
+                    {advisorResearchInterests.map((interest) => (
+                      <li
+                        key={interest}
+                        className="flex min-h-[52px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700"
+                      >
+                        {interest}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-6 border-t border-slate-200 pt-6">
+                  <a
+                    href="mailto:eungkyosuh@dankook.ac.kr"
+                    className="inline-flex items-center gap-2 break-all text-base font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+                    data-testid="advisor-email"
+                  >
+                    <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
+                    <span>eungkyosuh@dankook.ac.kr</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <Button
+            size="lg"
+            className="h-14 rounded-lg bg-gradient-to-r from-primary to-blue-600 px-8 text-base font-bold"
+            asChild
+          >
+            <a
+              href="https://grad.dankook.ac.kr/-33?p_p_id=dku_org_GradDeptInfoPortlet_INSTANCE_lgrb&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_dku_org_GradDeptInfoPortlet_INSTANCE_lgrb_action=view_message&_dku_org_GradDeptInfoPortlet_INSTANCE_lgrb_orgId=2000004845"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-professors"
+            >
+              교수진 더 알아보기 <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function About() {
   const [loginOpen, setLoginOpen] = useState(false);
 
@@ -53,6 +160,8 @@ export default function About() {
         objectPosition="70% 50%"
         overlayClassName="bg-[#071B33]/60"
       />
+
+      <AdvisorSection />
 
       <section className="py-12 lg:py-16 bg-white">
         <div className="container mx-auto px-4">
@@ -253,96 +362,6 @@ export default function About() {
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
-      </section>
-
-      <section className="py-12 lg:py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-10"
-          >
-            <p className="text-primary font-semibold text-base mb-1">ADVISOR</p>
-            <h2 className="text-3xl lg:text-4xl font-black text-gray-900 mb-6">
-              지도교수
-            </h2>
-          </motion.div>
-
-          <Card
-            className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
-            data-testid="advisor-profile"
-          >
-            <CardContent className="p-0">
-              <div className="grid md:grid-cols-[260px_minmax(0,1fr)]">
-                <div className="flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8 lg:p-10">
-                  <img
-                    src="/portrait_transparent.png"
-                    alt="서응교 지도교수"
-                    className="h-44 w-44 object-contain sm:h-48 sm:w-48"
-                    width="210"
-                    height="196"
-                    loading="lazy"
-                    decoding="async"
-                    data-testid="advisor-portrait"
-                  />
-                </div>
-
-                <div className="p-7 sm:p-8 lg:p-10">
-                  <p className="mb-2 text-sm font-bold tracking-wide text-primary">지도교수</p>
-                  <h3 className="text-2xl font-black text-gray-900 sm:text-3xl">서응교 교수</h3>
-
-                  <div className="mt-5 flex items-start gap-2.5 text-base text-slate-600">
-                    <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-                    <span>단국대학교 대학원 데이터지식서비스공학과</span>
-                  </div>
-
-                  <div className="mt-7 border-t border-slate-200 pt-6">
-                    <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
-                    <ul className="mt-3 grid gap-3 sm:grid-cols-3" aria-label="서응교 교수 연구관심분야">
-                      {["Artificial Intelligence", "Metaverse", "Smart City 등"].map((interest) => (
-                        <li
-                          key={interest}
-                          className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-slate-700"
-                        >
-                          {interest}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="mt-6 border-t border-slate-200 pt-6">
-                    <a
-                      href="mailto:eungkyosuh@dankook.ac.kr"
-                      className="inline-flex items-center gap-2 break-all text-base font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-                      data-testid="advisor-email"
-                    >
-                      <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
-                      <span>eungkyosuh@dankook.ac.kr</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="text-center">
-            <Button 
-              size="lg" 
-              className="rounded-lg px-8 h-14 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
-              asChild
-            >
-              <a 
-                href="https://grad.dankook.ac.kr/-33?p_p_id=dku_org_GradDeptInfoPortlet_INSTANCE_lgrb&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_dku_org_GradDeptInfoPortlet_INSTANCE_lgrb_action=view_message&_dku_org_GradDeptInfoPortlet_INSTANCE_lgrb_orgId=2000004845"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-professors"
-              >
-                교수진 더 알아보기 <ExternalLink className="ml-2 w-4 h-4" />
-              </a>
-            </Button>
-          </div>
         </div>
       </section>
 

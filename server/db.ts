@@ -81,7 +81,7 @@ export async function ensureTablesExist() {
       
       CREATE TABLE IF NOT EXISTS papers (
         id SERIAL PRIMARY KEY,
-        category TEXT NOT NULL DEFAULT 'domestic-conference',
+        category TEXT NOT NULL DEFAULT 'conference',
         title TEXT NOT NULL,
         authors TEXT NOT NULL,
         first_author TEXT,

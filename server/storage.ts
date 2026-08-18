@@ -284,7 +284,7 @@ export class MemoryStorage implements IStorage {
   async createPaper(paper: InsertPaper): Promise<Paper> {
     const newPaper: Paper = { 
       id: this.nextId.papers++,
-      category: paper.category ?? 'domestic-conference',
+      category: paper.category ?? 'conference',
       title: paper.title,
       authors: paper.authors,
       firstAuthor: paper.firstAuthor ?? null,

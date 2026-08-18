@@ -57,7 +57,7 @@ export type NoticeComment = typeof noticeComments.$inferSelect;
 
 export const papers = pgTable("papers", {
   id: serial("id").primaryKey(),
-  category: text("category").notNull().default("domestic-conference"),
+  category: text("category").notNull().default("conference"),
   title: text("title").notNull(),
   authors: text("authors").notNull(),
   firstAuthor: text("first_author"),
