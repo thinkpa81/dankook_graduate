@@ -59,6 +59,9 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
           <span className="hidden min-w-0 sm:block">
             <span className="block text-[11px] font-bold tracking-[0.13em] text-[#2156D9]">일반대학원</span>
             <span className="mt-0.5 block whitespace-nowrap text-[15px] font-extrabold tracking-[-0.02em] text-slate-900 lg:text-base">데이터지식서비스공학과</span>
+            <span className="mt-0.5 block whitespace-nowrap text-[10px] font-medium tracking-[-0.01em] text-slate-500 lg:text-[11px]">
+              AIMS Lab(에임즈 랩) : AI, Innovation, Metaverse &amp; Service Lab
+            </span>
           </span>
         </Link>
 
@@ -104,6 +107,9 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
             <div className="mt-3 border-b border-slate-200 pb-6">
               <img src={dkuLogo} alt="단국대학교" className="h-9 w-auto" />
               <p className="mt-3 text-sm font-extrabold text-slate-800">일반대학원 데이터지식서비스공학과</p>
+              <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
+                AIMS Lab(에임즈 랩) : AI, Innovation, Metaverse &amp; Service Lab
+              </p>
             </div>
 
             <nav className="mt-5 flex flex-col" aria-label="모바일 주요 메뉴">

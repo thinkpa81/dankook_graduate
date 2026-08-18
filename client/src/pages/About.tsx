@@ -97,7 +97,7 @@ function AdvisorSection() {
 
                 <div className="mt-7 border-t border-slate-200 pt-6">
                   <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
-                  <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="서응교 교수 연구관심분야">
+                  <ul className="mt-3 grid gap-3 md:grid-cols-3" aria-label="서응교 교수 연구관심분야">
                     {advisorResearchInterests.map((interest) => (
                       <li
                         key={interest}
@@ -155,7 +155,7 @@ export default function About() {
       <PageHero
         eyebrow="DEPARTMENT INTRODUCTION"
         title="학과 소개"
-        description="데이터지식서비스공학과는 데이터 분석 기반의 융합 연구를 통해 미래를 선도하는 전문 인재를 양성합니다."
+        description={"데이터지식서비스공학과는 데이터 분석 기반의 융합 연구를 통해 미래를 선도하는 전문 인재를\n양성합니다."}
         imageSrc="/page-hero-about.jpg"
         objectPosition="70% 50%"
         overlayClassName="bg-[#071B33]/60"

@@ -142,7 +142,7 @@ export default function Home() {
             >
               <p className="mb-5 flex items-center gap-3 text-sm font-bold tracking-[0.2em] text-blue-100 sm:text-base">
                 <span className="h-px w-9 bg-amber-400" aria-hidden="true" />
-                DATA KNOWLEDGE SERVICE ENGINEERING
+                DATA SCIENCE
               </p>
               <h1 id="hero-title" className="max-w-[680px] text-[2.45rem] font-black leading-[1.2] tracking-[-0.045em] text-white sm:text-5xl lg:text-[3.15rem]">
                 데이터로 지식을 만들고,
@@ -250,7 +250,7 @@ export default function Home() {
         <section className="bg-slate-50 py-18 lg:py-24" aria-labelledby="program-title">
           <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-10">
             <div className="mb-10 max-w-3xl">
-              <p className="mb-3 text-sm font-extrabold tracking-[0.16em] text-[#2156D9]">DEPARTMENT OF DATA KNOWLEDGE SERVICE ENGINEERING</p>
+              <p className="mb-3 text-sm font-extrabold tracking-[0.16em] text-[#2156D9]">DEPARTMENT OF DATA SCIENCE</p>
               <h2 id="program-title" className="text-3xl font-black leading-tight tracking-[-0.04em] text-slate-900 sm:text-4xl">학문과 산업을 잇는 데이터 융합 교육</h2>
               <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">기술적 분석 능력과 비즈니스 통찰을 함께 갖춘 연구자와 실무형 인재의 성장을 지원합니다.</p>
             </div>

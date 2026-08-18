@@ -42,7 +42,7 @@ export default function PageHero({
           <h1 id="page-hero-title" className="mb-4 text-4xl font-black text-white lg:text-5xl">
             {title}
           </h1>
-          <p className="max-w-2xl text-lg leading-relaxed text-slate-100">{description}</p>
+          <p className="max-w-4xl whitespace-pre-line text-lg leading-relaxed text-slate-100">{description}</p>
         </motion.div>
       </div>
     </section>

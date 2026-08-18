@@ -7,7 +7,7 @@ import {
   type NoticeComment, type InsertNoticeComment,
   type PaperComment, type InsertPaperComment
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -414,10 +414,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementNoticeViews(id: number): Promise<void> {
-    const notice = await this.getNotice(id);
-    if (notice) {
-      await this.db.update(notices).set({ views: notice.views + 1 }).where(eq(notices.id, id));
-    }
+    await this.db
+      .update(notices)
+      .set({ views: sql`${notices.views} + 1` })
+      .where(eq(notices.id, id));
   }
 
   async getNoticeComments(noticeId: number): Promise<NoticeComment[]> {
@@ -463,10 +463,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementPaperViews(id: number): Promise<void> {
-    const paper = await this.getPaper(id);
-    if (paper) {
-      await this.db.update(papers).set({ views: paper.views + 1 }).where(eq(papers.id, id));
-    }
+    await this.db
+      .update(papers)
+      .set({ views: sql`${papers.views} + 1` })
+      .where(eq(papers.id, id));
   }
 
   async getPaperComments(paperId: number): Promise<PaperComment[]> {
