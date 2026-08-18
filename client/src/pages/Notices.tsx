@@ -119,16 +119,6 @@ export default function Notices() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const getFileIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'docx': case 'doc': return '📄';
-      case 'xlsx': case 'xls': return '📊';
-      case 'pptx': case 'ppt': return '📽️';
-      case 'pdf': return '📕';
-      default: return '📎';
-    }
-  };
-
   const downloadFile = (file: FileAttachment) => {
     if (file.url) {
       const link = document.createElement('a');
@@ -415,7 +405,7 @@ export default function Notices() {
                     return (
                       <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{getFileIcon(displayName.split('.').pop() || '')}</span>
+                          <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
                           <span className="text-sm font-medium text-gray-700">{displayName}</span>
                         </div>
                         {downloadUrl ? (
@@ -499,7 +489,7 @@ export default function Notices() {
                   {formData.files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
                         <span className="text-sm font-medium">{file.name}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button>
@@ -549,7 +539,7 @@ export default function Notices() {
                   {formData.files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{getFileIcon(file.type)}</span>
+                        <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
                         <span className="text-sm font-medium">{file.name}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
-import { BookOpen, Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Download, MessageSquare, Send, Eye } from "lucide-react";
+import { Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Download, MessageSquare, Send, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,11 +37,6 @@ type CategoryKey = "conference" | "journal";
 const categoryTitles: Record<CategoryKey, string> = {
   conference: "학술대회",
   journal: "저널",
-};
-
-const categoryColors: Record<CategoryKey, string> = {
-  conference: "from-violet-500 to-purple-500",
-  journal: "from-blue-500 to-cyan-500",
 };
 
 const normalizeCategory = (value?: string | null): CategoryKey =>
@@ -110,16 +105,6 @@ export default function Papers() {
 
   const totalPages = Math.ceil(currentPapers.length / ITEMS_PER_PAGE);
   const displayedPapers = showAll ? currentPapers : currentPapers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  const getFileIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'docx': case 'doc': return '📄';
-      case 'xlsx': case 'xls': return '📊';
-      case 'pptx': case 'ppt': return '📽️';
-      case 'pdf': return '📕';
-      default: return '📎';
-    }
-  };
 
   const openAdd = () => {
     setFormData({ title: "", authors: "", websiteUrl: "" });
@@ -321,22 +306,25 @@ export default function Papers() {
           </div>
 
           <motion.div key={category} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className={`w-10 h-10 bg-gradient-to-br ${categoryColors[category]} rounded-lg flex items-center justify-center shadow-md`}><BookOpen className="w-5 h-5 text-white" /></div>
-              <h2 className="text-xl lg:text-2xl font-black text-gray-900">{categoryTitles[category]}</h2>
+            <div className="mb-6 border-l-4 border-primary pl-4">
+              <h2 className="text-xl font-black text-gray-900 lg:text-2xl">{categoryTitles[category]}</h2>
+              <p className="mt-1 text-sm text-slate-500">학과의 연구 성과와 학술 활동을 확인할 수 있습니다.</p>
             </div>
 
             <div className="space-y-4">
               {loading ? (
                 <div className="p-16 text-center text-gray-500">로딩 중...</div>
               ) : displayedPapers.map((paper) => (
-                <Card key={paper.id} className="border-0 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden group">
+                <Card key={paper.id} className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-blue-200 hover:shadow-md">
                   <CardContent className="p-5 lg:p-6">
                     <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 bg-gradient-to-br ${categoryColors[category]} rounded-lg flex items-center justify-center flex-shrink-0 shadow-md`}><BookOpen className="w-6 h-6 text-white" /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-2">
-                          <h3 className="font-bold text-lg text-gray-900 mb-2 cursor-pointer hover:text-primary transition-colors" onClick={() => openView(paper)}>{paper.title}</h3>
+                          <h3 className="mb-2 text-lg font-bold text-gray-900">
+                            <button type="button" className="text-left transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" onClick={() => openView(paper)} data-testid={`paper-view-${paper.id}`}>
+                              {paper.title}
+                            </button>
+                          </h3>
                           {paper.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1 mt-1"><MessageSquare className="w-3 h-3" />{paper.comments.length}</span>}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-base text-gray-600 mb-2">
@@ -346,11 +334,11 @@ export default function Papers() {
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                           {(paper.venue || paper.journal) && <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" />{paper.venue || paper.journal}{paper.volume && ` (${paper.volume})`}</span>}
-                          <Badge className={`bg-gradient-to-r ${categoryColors[category]} text-white border-0`}>{paper.year}</Badge>
+                          <Badge variant="secondary" className="gap-1 border border-slate-200 bg-slate-100 font-semibold text-slate-600"><Eye className="h-3.5 w-3.5" />조회수 {paper.views}</Badge>
                           {paper.websiteUrl && <a href={paper.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />사이트</a>}
                         </div>
                         {paper.files && paper.files.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-3">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">{getFileIcon(fileName.split('.').pop() || '')} {fileName}</span>)}</div>
+                          <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -361,7 +349,7 @@ export default function Papers() {
                   </CardContent>
                 </Card>
               ))}
-              {!loading && currentPapers.length === 0 && <div className="p-16 text-center text-gray-500"><BookOpen className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">등록된 논문이 없습니다.</p></div>}
+              {!loading && currentPapers.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-16 text-center text-gray-500"><p className="text-base">등록된 논문이 없습니다.</p></div>}
             </div>
 
             {!showAll && totalPages > 1 && (
@@ -381,7 +369,7 @@ export default function Papers() {
             <DialogTitle className="text-xl font-bold pr-8">{viewingPaper?.title}</DialogTitle>
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 pt-2">
               <span className="flex items-center gap-1"><Users className="w-4 h-4" />{viewingPaper?.authors}</span>
-              <Badge className={`bg-gradient-to-r ${categoryColors[category]} text-white border-0`}>{viewingPaper?.year}</Badge>
+              <Badge variant="secondary" className="gap-1 border border-slate-200 bg-slate-100 font-semibold text-slate-600"><Eye className="h-3.5 w-3.5" />조회수 {viewingPaper?.views ?? 0}</Badge>
             </div>
           </DialogHeader>
           <div className="space-y-6 mt-4">
@@ -401,7 +389,7 @@ export default function Papers() {
                     const downloadUrl = isUrl ? fileStr : '';
                     return (
                       <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(displayName.split('.').pop() || '')}</span><span className="text-sm font-medium text-gray-700">{displayName}</span></div>
+                        <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-slate-500" aria-hidden="true" /><span className="text-sm font-medium text-gray-700">{displayName}</span></div>
                         {downloadUrl ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors"><Download className="w-4 h-4" />다운로드</a>
                         ) : (

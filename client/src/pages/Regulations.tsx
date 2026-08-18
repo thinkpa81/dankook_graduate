@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, BookOpen, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,6 @@ const regulations = [
     id: 1,
     title: "제1장 총칙",
     description: "목적 및 적용 범위",
-    icon: "📜",
     content: `제1조 (목적)
 본 내규는 단국대학교 창학정신을 구현하기 위하여 설립된 대학원의 학칙 및 시행세칙에 따라 데이터지식서비스공학과의 합리적인 운영에 필요한 사항들을 규정하여 정리하는 데 목적을 둔다.
 
@@ -29,7 +28,6 @@ const regulations = [
     id: 2,
     title: "제2장 입학관리",
     description: "우수학생 유치",
-    icon: "🎓",
     content: `제3조 (우수학생의 유치)
 데이터지식서비스공학과 소속 교수들은 데이터지식서비스공학과 석·박사 및 통합 학위과정이 활성화될 수 있도록 우수학생의 모집에 적극적으로 노력한다.`,
   },
@@ -37,7 +35,6 @@ const regulations = [
     id: 3,
     title: "제3장 교육과정 및 교·강사 배정",
     description: "교과과정, 과목개설, 코어 과목",
-    icon: "📚",
     content: `제4조 (교육과정)
 데이터사이언스학 교육 및 연구에 맞는 내용으로 교육을 진행, 일반적인 규정은 학칙에 따른다.
 
@@ -62,7 +59,6 @@ const regulations = [
     id: 4,
     title: "제4장 논문지도",
     description: "지도교수 선정",
-    icon: "👨‍🏫",
     content: `제8조 (지도교수의 선정)
 지도교수는 컴퓨터공학, 소프트웨어학, 통계학, 경영학, 모바일시스템공학, 디자인씽킹, 건축공학 등 데이터지식서비스공학 관련 학과 소속 교수진으로 데이터지식서비스공학 개설 과목을 강의할 수 있는 교수로 한정한다. 일반적인 규정은 학칙에 따른다.`,
   },
@@ -70,7 +66,6 @@ const regulations = [
     id: 5,
     title: "제5장 자격시험",
     description: "종합시험 응시자격, 면제기준, 출제와 채점",
-    icon: "✍️",
     content: `제9조 (종합시험 응시자격)
 다음 조건을 갖춘 경우에 종합학력시험에 응시할 수 있다.
 
@@ -96,7 +91,6 @@ const regulations = [
     id: 6,
     title: "제6장 학위과정",
     description: "석사학위 과정 선택, 변경, 졸업요건",
-    icon: "🎖️",
     content: `제13조 (석사학위 과정 선택)
 석사학위 취득은 학위논문을 기본으로 한다.
 
@@ -114,7 +108,6 @@ const regulations = [
     id: 7,
     title: "제7장 학위논문 심사 및 제출",
     description: "연구계획서, 예비발표, 논문심사위원",
-    icon: "📝",
     content: `제16조 (연구계획서 제출 및 심사)
 석·박사과정 중 혹은 수료 후 적절한 시기에 지도교수에게 연구계획서를 제출한다.
 
@@ -131,7 +124,6 @@ const regulations = [
     id: 8,
     title: "제8장 학과 운영위원회",
     description: "의사결정 방식",
-    icon: "🏛️",
     content: `제20조 (의사결정 방식)
 학과 운영에 관한 제반 사항에 의사결정은 학과 운영위원회를 개최하여 전체 교수의 1/2 이상의 참석(위임 포함)과 참석 교수의 2/3 찬성으로 결정하는 것을 원칙으로 한다.`,
   },
@@ -173,21 +165,16 @@ export default function Regulations() {
       <section className="py-10 lg:py-14 flex-1">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="mb-6">
-            <Card className="border-0 shadow-lg rounded-xl bg-gradient-to-r from-blue-50 to-white">
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
               <CardContent className="p-5 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <BookOpen className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
+                  <div className="border-l-4 border-primary pl-4">
                       <h2 className="text-xl font-bold text-gray-900">
                         대학원 데이터지식서비스공학과 운영 내규
                       </h2>
                       <p className="text-gray-500 text-base">
                         단국대학교 일반대학원 학칙 및 시행세칙에 따른 학과 운영 규정
                       </p>
-                    </div>
                   </div>
                   <Button 
                     onClick={handleShowAll}
@@ -225,13 +212,13 @@ export default function Regulations() {
                   open={openItems.includes(reg.id)}
                   onOpenChange={() => toggleItem(reg.id)}
                 >
-                  <Card className="border-0 shadow-md overflow-hidden rounded-xl">
+                  <Card className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                     <CollapsibleTrigger asChild>
-                      <CardHeader className="cursor-pointer hover:bg-blue-50/50 transition-colors p-4 lg:p-5">
+                      <CardHeader className="cursor-pointer p-4 transition-colors hover:bg-slate-50 lg:p-5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center text-xl">
-                              {reg.icon}
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-500" aria-hidden="true">
+                              {String(index + 1).padStart(2, "0")}
                             </div>
                             <div>
                               <CardTitle className="text-lg font-bold text-gray-900" data-testid={`regulation-title-${reg.id}`}>
@@ -242,7 +229,7 @@ export default function Regulations() {
                               </p>
                             </div>
                           </div>
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${openItems.includes(reg.id) ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${openItems.includes(reg.id) ? 'bg-blue-50 text-primary' : 'text-slate-500'}`}>
                             {openItems.includes(reg.id) ? (
                               <ChevronUp className="w-4 h-4" />
                             ) : (
