@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
-import { BookOpen, Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Upload, X, Download, MessageSquare, Send, Eye } from "lucide-react";
+import { BookOpen, Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Download, MessageSquare, Send, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,38 +32,35 @@ import PageHero from "@/components/PageHero";
 import { api, Paper, PaperComment } from "@/lib/api";
 import { toast } from "sonner";
 
-interface FileAttachment {
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  file?: File;
-}
-
-type CategoryKey = "domestic-conference" | "international-conference" | "domestic-journal" | "international-journal" | "main-journal";
+type CategoryKey = "conference" | "journal";
 
 const categoryTitles: Record<CategoryKey, string> = {
-  "domestic-conference": "국내 학술대회",
-  "international-conference": "해외 학술대회",
-  "domestic-journal": "국내저널",
-  "international-journal": "해외저널",
-  "main-journal": "본 심사",
+  conference: "학술대회",
+  journal: "저널",
 };
 
 const categoryColors: Record<CategoryKey, string> = {
-  "domestic-conference": "from-blue-500 to-cyan-500",
-  "international-conference": "from-violet-500 to-purple-500",
-  "domestic-journal": "from-emerald-500 to-teal-500",
-  "international-journal": "from-orange-500 to-amber-500",
-  "main-journal": "from-rose-500 to-pink-500",
+  conference: "from-violet-500 to-purple-500",
+  journal: "from-blue-500 to-cyan-500",
+};
+
+const normalizeCategory = (value?: string | null): CategoryKey =>
+  value?.includes("journal") ? "journal" : "conference";
+
+const isValidWebsiteUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 };
 
 const ITEMS_PER_PAGE = 5;
 
 export default function Papers() {
   const params = useParams<{ category?: string }>();
-  const category = (params.category || "domestic-conference") as CategoryKey;
-  const isJournal = category.includes("journal");
+  const category = normalizeCategory(params.category);
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
@@ -83,7 +80,9 @@ export default function Papers() {
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    title: "", authors: "", firstAuthor: "", correspondingAuthor: "", venue: "", journal: "", volume: "", year: "", websiteUrl: "", files: [] as FileAttachment[],
+    title: "",
+    authors: "",
+    websiteUrl: "",
   });
 
   const loadPapers = async () => {
@@ -106,29 +105,11 @@ export default function Papers() {
   }, [category]);
 
   const currentPapers = useMemo(() => {
-    return papers.filter(p => p.category === category);
+    return papers.filter(p => normalizeCategory(p.category) === category);
   }, [papers, category]);
 
   const totalPages = Math.ceil(currentPapers.length / ITEMS_PER_PAGE);
   const displayedPapers = showAll ? currentPapers : currentPapers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const newFiles: FileAttachment[] = Array.from(files).map(file => ({
-        name: file.name,
-        type: file.name.split('.').pop() || '',
-        size: file.size,
-        url: URL.createObjectURL(file),
-        file: file,
-      }));
-      setFormData({ ...formData, files: [...formData.files, ...newFiles] });
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFormData({ ...formData, files: formData.files.filter((_, i) => i !== index) });
-  };
 
   const getFileIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -140,23 +121,8 @@ export default function Papers() {
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const downloadFile = (file: FileAttachment) => {
-    if (file.url) {
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.download = file.name;
-      link.click();
-    }
-  };
-
   const openAdd = () => {
-    setFormData({ title: "", authors: "", firstAuthor: "", correspondingAuthor: "", venue: "", journal: "", volume: "", year: "", websiteUrl: "", files: [] });
+    setFormData({ title: "", authors: "", websiteUrl: "" });
     setIsAddOpen(true);
   };
 
@@ -165,18 +131,7 @@ export default function Papers() {
     setFormData({
       title: paper.title,
       authors: paper.authors,
-      firstAuthor: paper.firstAuthor || "",
-      correspondingAuthor: paper.correspondingAuthor || "",
-      venue: paper.venue || "",
-      journal: paper.journal || "",
-      volume: paper.volume || "",
-      year: paper.year,
       websiteUrl: paper.websiteUrl || "",
-      files: paper.files.map(fileStr => {
-        const isUrl = fileStr.startsWith('/uploads/');
-        const name = isUrl ? fileStr.split('/').pop()?.replace(/^\d+-\d+-/, '') || fileStr : fileStr;
-        return { name, type: name.split('.').pop() || '', size: 0, url: isUrl ? fileStr : '' };
-      }),
     });
     setIsEditOpen(true);
   };
@@ -199,37 +154,29 @@ export default function Papers() {
       toast.error("논문 제목을 입력해주세요.");
       return;
     }
+    if (!formData.authors.trim()) {
+      toast.error("저자를 입력해주세요.");
+      return;
+    }
+    if (!isValidWebsiteUrl(formData.websiteUrl.trim())) {
+      toast.error("http:// 또는 https://로 시작하는 사이트 주소를 입력해주세요.");
+      return;
+    }
     try {
-      const newFiles = formData.files.filter(f => f.file);
-      let uploadedUrls: string[] = [];
-      
-      if (newFiles.length > 0) {
-        try {
-          const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
-          uploadedUrls = uploaded.map(u => u.url);
-        } catch (uploadError: any) {
-          toast.error(uploadError.message || "파일 업로드에 실패했습니다.");
-          return;
-        }
-      }
-      
-      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
-      const allFileUrls = [...existingUrls, ...uploadedUrls];
-      
       await api.papers.create({
         category,
-        title: formData.title,
-        authors: formData.authors,
-        firstAuthor: formData.firstAuthor || null,
-        correspondingAuthor: formData.correspondingAuthor || null,
-        venue: formData.venue || null,
-        journal: formData.journal || null,
-        volume: formData.volume || null,
-        year: formData.year,
+        title: formData.title.trim(),
+        authors: formData.authors.trim(),
+        firstAuthor: null,
+        correspondingAuthor: null,
+        venue: null,
+        journal: null,
+        volume: null,
+        year: String(new Date().getFullYear()),
         abstract: null,
         keywords: [],
-        files: allFileUrls,
-        websiteUrl: formData.websiteUrl || null,
+        files: [],
+        websiteUrl: formData.websiteUrl.trim(),
         date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
         views: 0,
       });
@@ -244,34 +191,23 @@ export default function Papers() {
 
   const handleEdit = async () => {
     if (!editingPaper) return;
+    if (!formData.title.trim()) {
+      toast.error("논문 제목을 입력해주세요.");
+      return;
+    }
+    if (!formData.authors.trim()) {
+      toast.error("저자를 입력해주세요.");
+      return;
+    }
+    if (!isValidWebsiteUrl(formData.websiteUrl.trim())) {
+      toast.error("http:// 또는 https://로 시작하는 사이트 주소를 입력해주세요.");
+      return;
+    }
     try {
-      const newFiles = formData.files.filter(f => f.file);
-      let uploadedUrls: string[] = [];
-      
-      if (newFiles.length > 0) {
-        try {
-          const uploaded = await api.uploadFiles(newFiles.map(f => f.file!));
-          uploadedUrls = uploaded.map(u => u.url);
-        } catch (uploadError: any) {
-          toast.error(uploadError.message || "파일 업로드에 실패했습니다.");
-          return;
-        }
-      }
-      
-      const existingUrls = formData.files.filter(f => !f.file && f.url).map(f => f.url);
-      const allFileUrls = [...existingUrls, ...uploadedUrls];
-      
       await api.papers.update(editingPaper.id, {
-        title: formData.title,
-        authors: formData.authors,
-        firstAuthor: formData.firstAuthor || null,
-        correspondingAuthor: formData.correspondingAuthor || null,
-        venue: formData.venue || null,
-        journal: formData.journal || null,
-        volume: formData.volume || null,
-        year: formData.year,
-        websiteUrl: formData.websiteUrl || null,
-        files: allFileUrls,
+        title: formData.title.trim(),
+        authors: formData.authors.trim(),
+        websiteUrl: formData.websiteUrl.trim(),
       });
       await loadPapers();
       setIsEditOpen(false);
@@ -366,9 +302,9 @@ export default function Papers() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
             <Tabs value={category} className="w-full lg:w-auto">
-              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto p-1 bg-white shadow-md rounded-xl">
+              <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-white p-1 shadow-md lg:w-[360px]">
                 {(Object.keys(categoryTitles) as CategoryKey[]).map(cat => (
-                  <TabsTrigger key={cat} value={cat} asChild className="rounded-lg py-2 text-xs lg:text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white">
+                  <TabsTrigger key={cat} value={cat} asChild className="rounded-lg py-2.5 text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-blue-600 data-[state=active]:text-white" data-testid={`paper-category-${cat}`}>
                     <Link href={`/papers/${cat}`}>{categoryTitles[cat]}</Link>
                   </TabsTrigger>
                 ))}
@@ -409,7 +345,7 @@ export default function Papers() {
                           {paper.correspondingAuthor && <span className="text-sm text-green-600">교신저자: {paper.correspondingAuthor}</span>}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                          <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" />{paper.venue || paper.journal}{paper.volume && ` (${paper.volume})`}</span>
+                          {(paper.venue || paper.journal) && <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" />{paper.venue || paper.journal}{paper.volume && ` (${paper.volume})`}</span>}
                           <Badge className={`bg-gradient-to-r ${categoryColors[category]} text-white border-0`}>{paper.year}</Badge>
                           {paper.websiteUrl && <a href={paper.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1 hover:underline"><ExternalLink className="w-3.5 h-3.5" />사이트</a>}
                         </div>
@@ -450,7 +386,7 @@ export default function Papers() {
           </DialogHeader>
           <div className="space-y-6 mt-4">
             <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-              <p className="text-gray-700 text-base"><strong>게재처:</strong> {viewingPaper?.venue || viewingPaper?.journal}{viewingPaper?.volume && ` (${viewingPaper.volume})`}</p>
+              {(viewingPaper?.venue || viewingPaper?.journal) && <p className="text-gray-700 text-base"><strong>게재처:</strong> {viewingPaper.venue || viewingPaper.journal}{viewingPaper.volume && ` (${viewingPaper.volume})`}</p>}
               {viewingPaper?.firstAuthor && <p className="text-blue-600 text-base"><strong>주저자:</strong> {viewingPaper.firstAuthor}</p>}
               {viewingPaper?.correspondingAuthor && <p className="text-green-600 text-base"><strong>교신저자:</strong> {viewingPaper.correspondingAuthor}</p>}
               {viewingPaper?.websiteUrl && <p className="text-base"><strong>사이트:</strong> <a href={viewingPaper.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{viewingPaper.websiteUrl}</a></p>}
@@ -511,59 +447,40 @@ export default function Papers() {
       </Dialog>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-lg rounded-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl font-bold">등록</DialogTitle><DialogDescription className="text-base">{categoryTitles[category]}에 새 논문을 등록합니다.</DialogDescription></DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2"><Label className="font-bold">논문 제목</Label><Input placeholder="논문 제목을 입력하세요" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="space-y-2"><Label className="font-bold">저자</Label><Input placeholder="저자를 입력하세요" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label className="font-bold">주저자</Label><Input placeholder="주저자" value={formData.firstAuthor} onChange={(e) => setFormData({ ...formData, firstAuthor: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-              <div className="space-y-2"><Label className="font-bold">교신저자</Label><Input placeholder="교신저자" value={formData.correspondingAuthor} onChange={(e) => setFormData({ ...formData, correspondingAuthor: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            </div>
-            <div className="space-y-2"><Label className="font-bold">사이트 주소</Label><Input placeholder="https://example.com" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="space-y-2"><Label className="font-bold">{isJournal ? "저널명" : "학술대회명"}</Label><Input placeholder={isJournal ? "저널명을 입력하세요" : "학술대회명을 입력하세요"} value={isJournal ? formData.journal : formData.venue} onChange={(e) => setFormData({ ...formData, [isJournal ? 'journal' : 'venue']: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label className="font-bold">발행년도</Label><Input placeholder="2024" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-              {isJournal && <div className="space-y-2"><Label className="font-bold">Volume</Label><Input placeholder="51(3)" value={formData.volume} onChange={(e) => setFormData({ ...formData, volume: e.target.value })} className="h-11 rounded-lg text-base" /></div>}
+        <DialogContent className="max-h-[85vh] rounded-xl sm:max-w-lg" data-testid="paper-add-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">등록</DialogTitle>
+            <DialogDescription className="text-base">{categoryTitles[category]}에 새 논문을 등록합니다.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="paper-title" className="font-bold">논문 제목</Label>
+              <Input id="paper-title" placeholder="논문 제목을 입력하세요" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" autoFocus />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold">첨부파일</Label>
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                <input type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" onChange={handleFileChange} className="hidden" id="paper-file-upload" />
-                <label htmlFor="paper-file-upload" className="cursor-pointer flex flex-col items-center gap-2"><Upload className="w-8 h-8 text-gray-400" /><span className="text-sm text-gray-500">클릭하여 파일 업로드</span></label>
-              </div>
-              {formData.files.length > 0 && <div className="space-y-2 mt-3">{formData.files.map((file, index) => <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(file.type)}</span><span className="text-sm font-medium">{file.name}</span></div><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button></div>)}</div>}
+              <Label htmlFor="paper-authors" className="font-bold">저자</Label>
+              <Input id="paper-authors" placeholder="저자를 입력하세요" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
-            <div className="flex gap-3 pt-4"><Button variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1 rounded-lg h-11 text-base">취소</Button><Button onClick={handleAdd} className="flex-1 rounded-lg h-11 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">등록</Button></div>
+            <div className="space-y-2">
+              <Label htmlFor="paper-website" className="font-bold">사이트 주소</Label>
+              <Input id="paper-website" type="url" inputMode="url" placeholder="https://example.com" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" />
+            </div>
+            <div className="flex gap-3 pt-3">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="h-12 flex-1 rounded-lg text-base">취소</Button>
+              <Button onClick={handleAdd} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold" data-testid="paper-submit">등록</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-lg rounded-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] rounded-xl sm:max-w-lg">
           <DialogHeader><DialogTitle className="text-xl font-bold">논문 수정</DialogTitle></DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2"><Label className="font-bold">논문 제목</Label><Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="space-y-2"><Label className="font-bold">저자</Label><Input value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label className="font-bold">주저자</Label><Input value={formData.firstAuthor} onChange={(e) => setFormData({ ...formData, firstAuthor: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-              <div className="space-y-2"><Label className="font-bold">교신저자</Label><Input value={formData.correspondingAuthor} onChange={(e) => setFormData({ ...formData, correspondingAuthor: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            </div>
-            <div className="space-y-2"><Label className="font-bold">사이트 주소</Label><Input value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="space-y-2"><Label className="font-bold">{isJournal ? "저널명" : "학술대회명"}</Label><Input value={isJournal ? formData.journal : formData.venue} onChange={(e) => setFormData({ ...formData, [isJournal ? 'journal' : 'venue']: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label className="font-bold">발행년도</Label><Input value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} className="h-11 rounded-lg text-base" /></div>
-              {isJournal && <div className="space-y-2"><Label className="font-bold">Volume</Label><Input value={formData.volume} onChange={(e) => setFormData({ ...formData, volume: e.target.value })} className="h-11 rounded-lg text-base" /></div>}
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold">첨부파일</Label>
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                <input type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf" onChange={handleFileChange} className="hidden" id="paper-file-upload-edit" />
-                <label htmlFor="paper-file-upload-edit" className="cursor-pointer flex flex-col items-center gap-2"><Upload className="w-8 h-8 text-gray-400" /><span className="text-sm text-gray-500">클릭하여 파일 업로드</span></label>
-              </div>
-              {formData.files.length > 0 && <div className="space-y-2 mt-3">{formData.files.map((file, index) => <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${file.file ? 'bg-blue-50 border border-blue-200' : file.url ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'}`}><div className="flex items-center gap-2"><span className="text-lg">{getFileIcon(file.type)}</span><span className="text-sm font-medium">{file.name}</span>{!file.url && !file.file && <span className="text-xs text-orange-600 ml-2">(재업로드 필요)</span>}{file.file && <span className="text-xs text-blue-600 ml-2">(새 파일)</span>}</div><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}><X className="w-4 h-4" /></Button></div>)}</div>}
-            </div>
-            <div className="flex gap-3 pt-4"><Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 rounded-lg h-11 text-base">취소</Button><Button onClick={handleEdit} className="flex-1 rounded-lg h-11 font-bold bg-gradient-to-r from-primary to-blue-600 text-base">수정</Button></div>
+          <div className="mt-4 space-y-5">
+            <div className="space-y-2"><Label htmlFor="edit-paper-title" className="font-bold">논문 제목</Label><Input id="edit-paper-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" /></div>
+            <div className="space-y-2"><Label htmlFor="edit-paper-authors" className="font-bold">저자</Label><Input id="edit-paper-authors" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" /></div>
+            <div className="space-y-2"><Label htmlFor="edit-paper-website" className="font-bold">사이트 주소</Label><Input id="edit-paper-website" type="url" inputMode="url" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" /></div>
+            <div className="flex gap-3 pt-3"><Button variant="outline" onClick={() => setIsEditOpen(false)} className="h-12 flex-1 rounded-lg text-base">취소</Button><Button onClick={handleEdit} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold">수정</Button></div>
           </div>
         </DialogContent>
       </Dialog>

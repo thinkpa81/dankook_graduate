@@ -23,11 +23,8 @@ const navItems = [
     title: "논문",
     href: "/papers",
     children: [
-      { title: "국내 학술대회", href: "/papers/domestic-conference" },
-      { title: "해외 학술대회", href: "/papers/international-conference" },
-      { title: "국내저널", href: "/papers/domestic-journal" },
-      { title: "해외저널", href: "/papers/international-journal" },
-      { title: "본 심사", href: "/papers/main-journal" },
+      { title: "학술대회", href: "/papers/conference" },
+      { title: "저널", href: "/papers/journal" },
     ],
   },
   { title: "학과 내규", href: "/regulations" },
