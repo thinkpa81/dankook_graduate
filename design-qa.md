@@ -1,39 +1,30 @@
-# Design QA — 내부 페이지 배경 이미지
+# Design QA — 학과 소개 지도교수 프로필
 
-- Reference source: 사용자가 2026-08-18에 최종 첨부한 이미지 5장
-- Implementation: `/about`, `/notices`, `/regulations`, `/papers`, `/talent-pool`
+- Reference source: 사용자 제공 지도교수 카드 이미지와 `portrait_transparent(1).png`
+- Implementation: `/about` 페이지의 `ADVISOR / 지도교수` 영역
 - Browser viewport: 1363 × 936 CSS pixels
-- Primary state: 로그아웃 상태의 각 내부 페이지 첫 화면
-
-## Asset mapping
-
-| 페이지 | 적용 파일 | 원본 크기 | 표시 결과 |
-|---|---|---:|---|
-| 학과 소개 | `page-hero-about.jpg` | 2047 × 218 | 정상 |
-| 공지사항 | `page-hero-notices.jpg` | 2047 × 694 | 정상 |
-| 학과 내규 | `page-hero-regulations.jpg` | 2048 × 612 | 정상 |
-| 논문 | `page-hero-papers.jpg` | 2048 × 223 | 정상 |
-| 인재풀 등록 | `page-hero-talent-pool.jpg` | 2048 × 247 | 정상 |
+- Primary state: 로그아웃 상태의 학과 소개 페이지
 
 ## Visual comparison
 
-- 다섯 원본 이미지와 각 페이지의 구현 화면을 같은 순서로 대조했다.
-- 모든 이미지가 요청한 페이지에 정확히 연결되었고, 웹 전송에 최적화한 JPEG로 변환한 뒤 원본 비율을 유지한 `object-fit: cover` 방식으로 표시된다.
-- 페이지별 피사체 위치에 맞춰 `object-position`을 조정했다.
-- 짙은 Navy 단색 오버레이로 제목과 설명의 대비를 확보했다.
-- 제목 애니메이션 완료 후 불투명도는 모두 1이었다.
+- 참고 화면과 로컬 구현 화면을 한 화면 검수 입력에서 직접 비교했다.
+- 참고 화면의 중앙 정렬 섹션 제목, 흰색 카드, 옅은 회색 배경, 파란색 강조색과 CTA 구조를 유지했다.
+- 사용자의 배치 요청에 맞춰 기본 아이콘을 실제 교수 사진으로 교체하고, 데스크톱 카드를 사진 왼쪽·교수 정보 오른쪽의 2열 구조로 확장했다.
+- 제공된 사진은 자르거나 왜곡하지 않고 원본 비율의 `object-contain`으로 표시했다.
 - P0 결함: 없음.
 - P1 결함: 없음.
 - P2 결함: 없음.
 
-## Layout and interaction checks
+## Content and interaction checks
 
-- 데스크톱 히어로 높이는 공통 300px이며, 소개 페이지의 긴 설명은 콘텐츠 높이에 따라 314.5px로 자연스럽게 확장된다.
-- 다섯 페이지 모두 이미지가 완전히 로드되었고 잘못된 이미지 경로가 없었다.
-- 다섯 페이지 모두 의도하지 않은 가로 스크롤이 없었다.
-- 페이지별 기존 본문, 게시판, 논문, 내규, 인재풀 등록 기능 코드는 변경하지 않았다.
-- 로컬 UI 전용 미리보기에서 API 요청은 서버 없이 실행되어 예상된 JSON 파싱 오류가 발생했다. 이는 배경 이미지 구현과 무관하며, 배포 후 실제 Express API가 연결된 환경에서 재검증한다.
-- Chrome 확장 프로그램에서 발생한 진단 오류는 애플리케이션 오류에서 제외했다.
+- 교수명 `서응교 교수`와 역할 `지도교수`가 정상 표시된다.
+- 연구관심분야 `Artificial Intelligence`, `Metaverse`, `Smart City 등`이 요청 순서대로 표시된다.
+- 이메일 주소는 `mailto:eungkyosuh@dankook.ac.kr` 링크로 연결된다.
+- 사진 대체 텍스트는 `서응교 지도교수`로 제공된다.
+- 사진은 210 × 196px 원본으로 완전히 로드되었고 잘못된 경로가 없다.
+- 카드 너비 1024px, 높이 401px에서 정보가 잘리거나 겹치지 않으며 의도하지 않은 가로 스크롤이 없다.
+- `md:grid-cols-[260px_minmax(0,1fr)]` 반응형 규칙을 적용해 모바일에서는 1열, 데스크톱에서는 2열로 전환된다.
+- 애플리케이션 오류·경고는 없었다. Chrome 확장 프로그램의 진단 오류는 애플리케이션 오류에서 제외했다.
 
 ## Final result
 

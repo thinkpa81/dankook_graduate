@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, BookOpen, Award, ExternalLink, Database, Brain, Globe, User, MapPin, Building } from "lucide-react";
+import { GraduationCap, Award, ExternalLink, Database, Globe, Mail, Building } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -270,24 +270,59 @@ export default function About() {
             </h2>
           </motion.div>
 
-          <Card className="border-0 shadow-lg rounded-xl max-w-md mx-auto mb-8">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                  <User className="w-8 h-8 text-white" />
+          <Card
+            className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
+            data-testid="advisor-profile"
+          >
+            <CardContent className="p-0">
+              <div className="grid md:grid-cols-[260px_minmax(0,1fr)]">
+                <div className="flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8 lg:p-10">
+                  <img
+                    src="/portrait_transparent.png"
+                    alt="서응교 지도교수"
+                    className="h-44 w-44 object-contain sm:h-48 sm:w-48"
+                    width="210"
+                    height="196"
+                    loading="lazy"
+                    decoding="async"
+                    data-testid="advisor-portrait"
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-primary font-semibold mb-1">지도교수</p>
-                  <h3 className="text-xl font-bold text-gray-900">서응교</h3>
-                  <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>죽전</span>
+
+                <div className="p-7 sm:p-8 lg:p-10">
+                  <p className="mb-2 text-sm font-bold tracking-wide text-primary">지도교수</p>
+                  <h3 className="text-2xl font-black text-gray-900 sm:text-3xl">서응교 교수</h3>
+
+                  <div className="mt-5 flex items-start gap-2.5 text-base text-slate-600">
+                    <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                    <span>단국대학교 대학원 데이터지식서비스공학과</span>
+                  </div>
+
+                  <div className="mt-7 border-t border-slate-200 pt-6">
+                    <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
+                    <ul className="mt-3 grid gap-3 sm:grid-cols-3" aria-label="서응교 교수 연구관심분야">
+                      {["Artificial Intelligence", "Metaverse", "Smart City 등"].map((interest) => (
+                        <li
+                          key={interest}
+                          className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-slate-700"
+                        >
+                          {interest}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 border-t border-slate-200 pt-6">
+                    <a
+                      href="mailto:eungkyosuh@dankook.ac.kr"
+                      className="inline-flex items-center gap-2 break-all text-base font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+                      data-testid="advisor-email"
+                    >
+                      <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
+                      <span>eungkyosuh@dankook.ac.kr</span>
+                    </a>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600 text-base bg-gray-50 p-3 rounded-lg">
-                <Building className="w-4 h-4 text-gray-400" />
-                <span>소속: 대학원 데이터지식서비스공학과</span>
               </div>
             </CardContent>
           </Card>
