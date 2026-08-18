@@ -97,7 +97,7 @@ function AdvisorSection() {
 
                 <div className="mt-7 border-t border-slate-200 pt-6">
                   <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
-                  <ul className="mt-3 grid gap-3 md:grid-cols-3" aria-label="서응교 교수 연구관심분야">
+                  <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
                     {advisorResearchInterests.map((interest) => (
                       <li
                         key={interest}
