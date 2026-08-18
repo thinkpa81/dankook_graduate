@@ -367,6 +367,7 @@ export default function Papers() {
         <DialogContent className="sm:max-w-2xl rounded-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold pr-8">{viewingPaper?.title}</DialogTitle>
+            <DialogDescription>논문 정보와 등록된 의견을 확인합니다.</DialogDescription>
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 pt-2">
               <span className="flex items-center gap-1"><Users className="w-4 h-4" />{viewingPaper?.authors}</span>
               <Badge variant="secondary" className="gap-1 border border-slate-200 bg-slate-100 font-semibold text-slate-600"><Eye className="h-3.5 w-3.5" />조회수 {viewingPaper?.views ?? 0}</Badge>
@@ -463,7 +464,7 @@ export default function Papers() {
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-h-[85vh] rounded-xl sm:max-w-lg">
-          <DialogHeader><DialogTitle className="text-xl font-bold">논문 수정</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-bold">논문 수정</DialogTitle><DialogDescription>논문 제목, 저자와 사이트 주소를 수정합니다.</DialogDescription></DialogHeader>
           <div className="mt-4 space-y-5">
             <div className="space-y-2"><Label htmlFor="edit-paper-title" className="font-bold">논문 제목</Label><Input id="edit-paper-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" /></div>
             <div className="space-y-2"><Label htmlFor="edit-paper-authors" className="font-bold">저자</Label><Input id="edit-paper-authors" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" /></div>
@@ -478,7 +479,7 @@ export default function Papers() {
       </AlertDialog>
 
       <AlertDialog open={deleteCommentId !== null} onOpenChange={() => setDeleteCommentId(null)}>
-        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>댓글을 삭제하시겠습니까?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={deleteComment} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>댓글을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>삭제한 댓글은 복구할 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={deleteComment} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
       <Footer />
