@@ -92,16 +92,25 @@ function AdvisorSection() {
 
                 <div className="mt-5 flex items-start gap-2.5 text-base text-slate-600">
                   <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-                  <span>단국대학교 대학원 데이터지식서비스공학과</span>
+                  <div>
+                    <p>단국대학교 대학원 데이터지식서비스공학과</p>
+                    <p className="mt-2 text-sm font-semibold leading-relaxed text-primary">
+                      AIMS Lab(에임즈 랩): AI, Innovation, Metaverse &amp; Service Lab
+                    </p>
+                  </div>
                 </div>
 
                 <div className="mt-7 border-t border-slate-200 pt-6">
                   <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
                   <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
-                    {advisorResearchInterests.map((interest) => (
+                    {advisorResearchInterests.map((interest, index) => (
                       <li
                         key={interest}
-                        className="flex min-h-[52px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700"
+                        className={`flex min-h-[68px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700 ${
+                          index >= 8
+                            ? "lg:col-span-2 lg:min-h-[124px] lg:justify-center lg:px-8 lg:text-center lg:text-base lg:font-bold"
+                            : "lg:min-h-[76px]"
+                        }`}
                       >
                         {interest}
                       </li>
@@ -188,11 +197,9 @@ export default function About() {
                         </p>
                       </div>
                     </div>
-                    <p className="text-gray-600 leading-relaxed text-base">
-                      컴퓨터학, 통계학의 데이터 관리 및 분석 기술과 경영학 전반에 걸친 비즈니스마인드를 기반으로 
-                      SAP의 실무 중심 기술을 반영하여 사회 전분야에 융합 적용이 가능한 교육과정을 구성함으로써, 
-                      학부에서 컴퓨터학, 소프트웨어학, 통계학, 경영학, 경제학 등 관련 전공을 전공한 학생들 뿐 아니라 
-                      데이터 분석 기반의 융합 연구에 관심을 갖고 있는 학생들도 지원이 가능합니다.
+                    <p className="text-base leading-relaxed text-gray-600">
+                      <span className="block">데이터 관리 및 분석 기술과 비즈니스 마인드를 기반으로 사회</span>
+                      <span className="block">전 분야에 융합 적용이 가능한 미래 인재를 양성합니다.</span>
                     </p>
                   </div>
                   <div className="p-8 lg:p-10 bg-gradient-to-br from-amber-50 to-orange-50">

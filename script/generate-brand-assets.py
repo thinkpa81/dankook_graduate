@@ -54,15 +54,26 @@ def build_opengraph() -> None:
 
 def build_favicon() -> None:
     logo = Image.open(LOGO_PATH).convert("RGBA")
-    mark = logo.crop((0, 0, 118, 60))
-    alpha_bbox = mark.getchannel("A").getbbox()
+    source_mark = logo.crop((0, 0, 118, 60)).convert("RGB")
+    alpha = Image.new("L", source_mark.size)
+    alpha.putdata([
+        max(255 - red, 255 - green, 255 - blue)
+        for red, green, blue in source_mark.getdata()
+    ])
+    mark = Image.new("RGBA", source_mark.size, (255, 255, 255, 0))
+    mark.putalpha(alpha)
+    alpha_bbox = alpha.getbbox()
     if alpha_bbox:
         mark = mark.crop(alpha_bbox)
 
-    canvas = Image.new("RGBA", (512, 512), (255, 255, 255, 255))
+    canvas = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle((18, 18, 494, 494), radius=92, fill=(255, 255, 255, 255), outline=(221, 229, 241, 255), width=10)
-    mark.thumbnail((420, 300), Image.Resampling.LANCZOS)
+    draw.rounded_rectangle((12, 12, 500, 500), radius=104, fill=(0, 77, 147, 255))
+    scale = min(440 / mark.width, 300 / mark.height)
+    mark = mark.resize(
+        (round(mark.width * scale), round(mark.height * scale)),
+        Image.Resampling.LANCZOS,
+    )
     x = (canvas.width - mark.width) // 2
     y = (canvas.height - mark.height) // 2
     canvas.alpha_composite(mark, (x, y))
