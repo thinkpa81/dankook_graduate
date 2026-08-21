@@ -4,7 +4,6 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { randomBytes } from "crypto";
 import { initializeStorage } from "./storage";
 import { pool } from "./db";
 import {
@@ -12,19 +11,26 @@ import {
   isPasswordHash,
   requestIdMiddleware,
   requireSameOrigin,
+  resolveSessionSecret,
   type AppRole,
 } from "./security";
 
 const app = express();
 const httpServer = createServer(app);
 
-const sessionSecret = process.env.SESSION_SECRET ?? (
-  process.env.NODE_ENV === "production"
-    ? (() => { throw new Error("SESSION_SECRET is required in production"); })()
-    : randomBytes(32).toString("hex")
+const sessionSecretResolution = resolveSessionSecret(
+  process.env.SESSION_SECRET,
+  process.env.NODE_ENV === "production",
 );
-if (process.env.NODE_ENV === "production" && sessionSecret.length < 32) {
-  throw new Error("SESSION_SECRET must contain at least 32 characters in production");
+const sessionSecret = sessionSecretResolution.secret;
+if (process.env.NODE_ENV === "production" && sessionSecretResolution.source === "generated") {
+  console.warn(JSON.stringify({
+    type: "security_configuration_warning",
+    code: sessionSecretResolution.reason === "missing"
+      ? "SESSION_SECRET_MISSING"
+      : "SESSION_SECRET_TOO_SHORT",
+    message: "A cryptographically strong temporary session secret was generated; sessions will expire when the service restarts",
+  }));
 }
 
 const hasAdminUsername = Boolean(process.env.ADMIN_USERNAME?.trim());
