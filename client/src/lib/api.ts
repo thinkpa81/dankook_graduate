@@ -7,6 +7,16 @@ export interface User {
   email: string;
   registeredAt: string;
   registeredTime: string;
+  role: string;
+  status: string;
+  passwordResetRequired: boolean;
+}
+
+export interface SessionUser {
+  id: number;
+  username: string;
+  name: string;
+  role: "ADMIN" | "USER";
 }
 
 export interface NoticeComment {
@@ -15,6 +25,7 @@ export interface NoticeComment {
   author: string;
   content: string;
   date: string;
+  canEdit?: boolean;
 }
 
 export interface Notice {
@@ -34,6 +45,7 @@ export interface PaperComment {
   author: string;
   content: string;
   date: string;
+  canEdit?: boolean;
 }
 
 export interface Paper {
@@ -67,11 +79,14 @@ export interface Talent {
   motivation: string;
   registeredAt: string;
   registeredTime: string;
+  consentAt?: string;
+  retentionUntil?: string;
 }
 
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
@@ -132,7 +147,7 @@ async function logout(): Promise<void> {
   });
 }
 
-async function checkSession(): Promise<{ id: number; username: string } | null> {
+async function checkSession(): Promise<SessionUser | null> {
   try {
     const res = await fetch(`${API_BASE}/users/me`, {
       credentials: 'include',
@@ -152,17 +167,13 @@ export const api = {
   checkSession,
   users: {
     list: () => fetchApi<User[]>("/users"),
-    create: (data: { username: string; password: string; name: string; email: string; registeredAt: string; registeredTime: string }) =>
+    create: (data: { username: string; password: string; name: string; email: string }) =>
       fetchApi<User>("/users", { method: "POST", body: JSON.stringify(data) }),
     login: async (username: string, password: string) => {
-      const res = await fetch(`${API_BASE}/users/login`, {
+      return fetchApi<SessionUser>("/users/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: 'include',
       });
-      if (!res.ok) throw new Error("로그인 실패");
-      return res.json() as Promise<User>;
     },
     resetPassword: (id: number, password: string) =>
       fetchApi<{ success: boolean }>(`/users/${id}/password`, { method: "PATCH", body: JSON.stringify({ password }) }),
@@ -177,7 +188,7 @@ export const api = {
       fetchApi<Notice>(`/notices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/notices/${id}`, { method: "DELETE" }),
     incrementViews: (id: number) => fetchApi<{ success: boolean }>(`/notices/${id}/views`, { method: "PATCH" }),
-    addComment: (noticeId: number, data: { author: string; content: string; date: string }) =>
+    addComment: (noticeId: number, data: { content: string }) =>
       fetchApi<NoticeComment>(`/notices/${noticeId}/comments`, { method: "POST", body: JSON.stringify(data) }),
     updateComment: (commentId: number, content: string) =>
       fetchApi<NoticeComment>(`/notice-comments/${commentId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
@@ -193,7 +204,7 @@ export const api = {
       fetchApi<Paper>(`/papers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/papers/${id}`, { method: "DELETE" }),
     incrementViews: (id: number) => fetchApi<{ success: boolean }>(`/papers/${id}/views`, { method: "PATCH" }),
-    addComment: (paperId: number, data: { author: string; content: string; date: string }) =>
+    addComment: (paperId: number, data: { content: string }) =>
       fetchApi<PaperComment>(`/papers/${paperId}/comments`, { method: "POST", body: JSON.stringify(data) }),
     updateComment: (commentId: number, content: string) =>
       fetchApi<PaperComment>(`/paper-comments/${commentId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
@@ -203,8 +214,8 @@ export const api = {
   talents: {
     list: () => fetchApi<Talent[]>("/talents"),
     get: (id: number) => fetchApi<Talent>(`/talents/${id}`),
-    create: (data: Omit<Talent, "id">) =>
-      fetchApi<Talent>("/talents", { method: "POST", body: JSON.stringify(data) }),
+    create: (data: Omit<Talent, "id" | "registeredAt" | "registeredTime" | "consentAt" | "retentionUntil"> & { consent: true }) =>
+      fetchApi<{ success: boolean; id: number }>("/talents", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: Partial<Talent>) =>
       fetchApi<Talent>(`/talents/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/talents/${id}`, { method: "DELETE" }),

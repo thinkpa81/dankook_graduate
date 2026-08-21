@@ -32,6 +32,7 @@ import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 import { api, Talent, User as UserType } from "@/lib/api";
+import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/hooks/use-session";
 
 export default function TalentPool() {
   const [loginOpen, setLoginOpen] = useState(false);
@@ -39,7 +40,7 @@ export default function TalentPool() {
   const [submitted, setSubmitted] = useState(false);
   const [talentData, setTalentData] = useState<Talent[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminCredentials, setAdminCredentials] = useState({ id: "", password: "" });
@@ -55,6 +56,7 @@ export default function TalentPool() {
   });
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const [talents, usersList] = await Promise.all([
         api.talents.list(),
@@ -70,13 +72,25 @@ export default function TalentPool() {
   };
 
   useEffect(() => {
-    loadData();
+    const syncAdminSession = async () => {
+      const sessionUser = await api.checkSession();
+      if (sessionUser?.role === "ADMIN") {
+        setIsAdminLoggedIn(true);
+        void loadData();
+      } else {
+        setIsAdminLoggedIn(false);
+        setTalentData([]);
+        setUsers([]);
+      }
+    };
+    void syncAdminSession();
+    window.addEventListener(AUTH_CHANGED_EVENT, syncAdminSession);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, syncAdminSession);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreePrivacy) { alert("개인정보 수집 및 이용에 동의해주세요."); return; }
-    const now = new Date();
     try {
       await api.talents.create({
         name: formData.name, 
@@ -85,9 +99,8 @@ export default function TalentPool() {
         education: formData.education === 'bachelor' ? '학사 졸업(예정)' : formData.education === 'master' ? '석사 졸업(예정)' : '박사 졸업(예정)',
         major: formData.major, 
         interestedMajor: formData.interestedMajor === 'data-science' ? '데이터사이언스' : formData.interestedMajor === 'metaverse' ? '메타버스융합' : '둘 다',
-        motivation: formData.motivation, 
-        registeredAt: now.toISOString().split('T')[0].replace(/-/g, '.'), 
-        registeredTime: now.toTimeString().slice(0, 5),
+        motivation: formData.motivation,
+        consent: true,
       });
       setSubmitted(true);
     } catch (e) {
@@ -95,18 +108,35 @@ export default function TalentPool() {
     }
   };
 
-  const handleAdminLogin = () => {
-    if (adminCredentials.id === "thinkpa" && adminCredentials.password === "audghk99**") {
-      setIsAdminLoggedIn(true); 
-      setShowAdminLogin(false); 
-      setLoginError("");
-      loadData();
-    } else { 
-      setLoginError("아이디 또는 비밀번호가 올바르지 않습니다."); 
+  const handleAdminLogin = async () => {
+    setLoginError("");
+    try {
+      const sessionUser = await api.users.login(adminCredentials.id, adminCredentials.password);
+      if (sessionUser.role !== "ADMIN") {
+        await api.logout();
+        setLoginError("관리자 권한이 없는 계정입니다.");
+        return;
+      }
+      setIsAdminLoggedIn(true);
+      notifyAuthChanged();
+      setShowAdminLogin(false);
+      setAdminCredentials({ id: "", password: "" });
+    } catch {
+      setLoginError("아이디 또는 비밀번호가 올바르지 않습니다.");
     }
   };
 
-  const handleLogout = () => { setIsAdminLoggedIn(false); setAdminCredentials({ id: "", password: "" }); };
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      setIsAdminLoggedIn(false);
+      notifyAuthChanged();
+      setTalentData([]);
+      setUsers([]);
+      setAdminCredentials({ id: "", password: "" });
+    }
+  };
   
   const handleEditEntry = (entry: Talent) => setEditingEntry(entry);
   
@@ -138,7 +168,7 @@ export default function TalentPool() {
   };
 
   const handleResetPassword = async () => {
-    if (resetUserId && newPassword) {
+    if (resetUserId && newPassword.length >= 10) {
       try {
         await api.users.resetPassword(resetUserId, newPassword);
         setResetUserId(null); 
@@ -163,11 +193,18 @@ export default function TalentPool() {
   };
 
   const downloadExcel = () => {
+    const csvCell = (value: string) => {
+      const formulaSafe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${formulaSafe.replace(/"/g, '""')}"`;
+    };
     let csvContent = "이름,이메일,연락처,학력,학부전공,관심전공,지원동기,등록일,등록시간\n";
-    talentData.forEach(entry => { csvContent += `${entry.name},${entry.email},${entry.phone},${entry.education},${entry.major},${entry.interestedMajor},"${entry.motivation}",${entry.registeredAt},${entry.registeredTime}\n`; });
+    talentData.forEach(entry => {
+      csvContent += [entry.name, entry.email, entry.phone, entry.education, entry.major, entry.interestedMajor, entry.motivation, entry.registeredAt, entry.registeredTime].map(csvCell).join(",") + "\n";
+    });
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `인재풀_목록_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a"); link.href = objectUrl; link.download = `인재풀_목록_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(objectUrl);
   };
 
   return (
@@ -346,7 +383,7 @@ export default function TalentPool() {
       <Dialog open={resetUserId !== null} onOpenChange={() => { setResetUserId(null); setNewPassword(""); }}>
         <DialogContent className="sm:max-w-md rounded-xl"><DialogHeader><DialogTitle className="text-xl font-bold flex items-center gap-2"><RefreshCw className="w-5 h-5 text-primary" />비밀번호 초기화</DialogTitle><DialogDescription>새로운 비밀번호를 입력하세요.</DialogDescription></DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="space-y-2"><Label className="font-bold">새 비밀번호</Label><Input type="password" placeholder="새 비밀번호를 입력하세요" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-11 rounded-lg" /></div>
+            <div className="space-y-2"><Label className="font-bold">새 비밀번호 (10자 이상)</Label><Input type="password" minLength={10} placeholder="새 비밀번호를 입력하세요" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-11 rounded-lg" /></div>
             <div className="flex gap-3 pt-2"><Button variant="outline" onClick={() => { setResetUserId(null); setNewPassword(""); }} className="flex-1 rounded-lg h-11">취소</Button><Button onClick={handleResetPassword} className="flex-1 rounded-lg h-11 font-bold bg-gradient-to-r from-primary to-blue-600">초기화</Button></div>
           </div>
         </DialogContent>

@@ -30,6 +30,7 @@ import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 import { api, Notice, NoticeComment } from "@/lib/api";
+import { useSession } from "@/hooks/use-session";
 
 interface FileAttachment {
   name: string;
@@ -57,7 +58,6 @@ export default function Notices() {
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
   const [newComment, setNewComment] = useState("");
-  const [commentAuthor, setCommentAuthor] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
@@ -67,6 +67,8 @@ export default function Notices() {
     isImportant: false,
     files: [] as FileAttachment[],
   });
+  const { user: sessionUser } = useSession();
+  const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadNotices = async () => {
     setError(null);
@@ -245,18 +247,19 @@ export default function Notices() {
   };
 
   const addComment = async () => {
-    if (!viewingNotice || !newComment.trim() || !commentAuthor.trim()) return;
+    if (!viewingNotice || !newComment.trim()) return;
+    if (!sessionUser) {
+      setLoginOpen(true);
+      return;
+    }
     try {
       const comment = await api.notices.addComment(viewingNotice.id, {
-        author: commentAuthor,
         content: newComment,
-        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
       });
       const updated = { ...viewingNotice, comments: [...viewingNotice.comments, comment] };
       setViewingNotice(updated);
       setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
       setNewComment("");
-      setCommentAuthor("");
     } catch (e) {
       console.error("Failed to add comment", e);
     }
@@ -324,10 +327,12 @@ export default function Notices() {
                 data-testid="input-search"
               />
             </div>
-            <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
-              <Plus className="w-5 h-5 mr-2" />
-              공지 등록
-            </Button>
+            {isAdmin && (
+              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
+                <Plus className="w-5 h-5 mr-2" />
+                공지 등록
+              </Button>
+            )}
           </div>
 
           <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
@@ -337,7 +342,7 @@ export default function Notices() {
               <div className="col-span-2 text-center">작성일</div>
               <div className="col-span-1 text-center">조회수</div>
               <div className="col-span-1 text-center">첨부</div>
-              <div className="col-span-1 text-center">관리</div>
+              <div className="col-span-1 text-center">{isAdmin ? "관리" : ""}</div>
             </div>
             
             <CardContent className="p-0 bg-white">
@@ -357,8 +362,7 @@ export default function Notices() {
                   <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500"><Eye className="w-4 h-4 mr-1.5 md:hidden" />{notice.views}</div>
                   <div className="hidden md:flex col-span-1 items-center justify-center gap-1">{notice.files.length > 0 && <span className="flex items-center gap-1 text-xs text-gray-500"><FileText className="w-4 h-4 text-primary" />{notice.files.length}</span>}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(notice)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteId(notice.id)}><Trash2 className="w-4 h-4" /></Button>
+                    {isAdmin && <><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(notice)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteId(notice.id)}><Trash2 className="w-4 h-4" /></Button></>}
                   </div>
                 </div>
               )})}
@@ -408,10 +412,12 @@ export default function Notices() {
                           <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
                           <span className="text-sm font-medium text-gray-700">{displayName}</span>
                         </div>
-                        {downloadUrl ? (
+                        {downloadUrl && sessionUser ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors">
                             <Download className="w-4 h-4" />다운로드
                           </a>
+                        ) : downloadUrl ? (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className="text-primary">로그인 후 다운로드</Button>
                         ) : (
                           <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
@@ -439,8 +445,7 @@ export default function Notices() {
                         <span className="font-bold text-sm">{comment.author}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">{comment.date}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button>
+                          {comment.canEdit && <><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button></>}
                         </div>
                       </div>
                       <p className="text-sm text-gray-600">{comment.content}</p>
@@ -448,13 +453,13 @@ export default function Notices() {
                   )}
                 </div>
               ))}
-              <div className="space-y-2 mt-4">
-                <Input placeholder="이름을 입력하세요" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} className="h-10 rounded-lg text-base" />
+              {sessionUser ? <div className="space-y-2 mt-4">
+                <p className="text-sm text-gray-500">{sessionUser.username} 계정으로 댓글이 등록됩니다.</p>
                 <div className="flex gap-2">
                   <Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" />
                   <Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button>
                 </div>
-              </div>
+              </div> : <Button type="button" variant="outline" onClick={() => setLoginOpen(true)} className="mt-4">로그인 후 댓글 작성</Button>}
             </div>
           </div>
         </DialogContent>

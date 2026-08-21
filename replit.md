@@ -50,18 +50,19 @@ The server follows a layered architecture:
   - `talents`: Talent pool registration entries
 
 ### Authentication
-- Session-based authentication using express-session with memorystore
-- Secure httpOnly cookies with sameSite policy
-- Login creates server-side session, logout destroys it
-- Admin user: "thinkpa" with restricted file upload privileges
+- Session-based authentication using PostgreSQL-backed express-session storage
+- Secure httpOnly cookies, idle/absolute expiry, and login-time session rotation
+- Administrator identity and scrypt password hash are supplied only through deployment secrets
+- Server-side roles protect administrator APIs and ownership protects member comments
 - Login modal component handles both login and signup flows
 
 ### File Upload System
 - Files uploaded to `/uploads` directory on server
 - Admin-only file uploads (authenticated via session)
 - Allowed file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, HWP, HWPX, ZIP
-- Maximum file size: 50MB
-- Files served with Content-Disposition: attachment header for proper downloads
+- Maximum file size: 10MB per file and 5 files per request
+- Extensions, MIME types, and file signatures are checked before storage
+- Files are served only to authenticated sessions with Content-Disposition attachment headers
 - File URLs stored in database for Papers and Notices
 
 ### Build System

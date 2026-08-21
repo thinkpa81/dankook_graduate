@@ -79,9 +79,9 @@ Root directory: (비워둠 - 기본값 사용)
 | Variable name | Value | Environment |
 |--------------|-------|-------------|
 | `NODE_VERSION` | `20` | Production |
-| `DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require` | Production |
-| `NEON_DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require` | Production |
-| `SESSION_SECRET` | `dankook-graduate-secret-2026-change-in-production` | Production |
+| `DATABASE_URL` | 배포 플랫폼의 비밀 변수에 저장한 새 연결 문자열 | Production |
+| `NEON_DATABASE_URL` | 배포 플랫폼의 비밀 변수에 저장한 새 연결 문자열 | Production |
+| `SESSION_SECRET` | `openssl rand -base64 48`로 새로 생성한 값 | Production |
 
 **중요:** 각 변수마다 "Add environment variable" 버튼을 누르고, Environment는 반드시 **"Production"**을 선택하세요.
 

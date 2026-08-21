@@ -48,11 +48,11 @@
 ```bash
 NODE_ENV=production
 
-DATABASE_URL=postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=<배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-NEON_DATABASE_URL=postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+NEON_DATABASE_URL=<배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-SESSION_SECRET=dankook-graduate-railway-secure-2026
+SESSION_SECRET=<openssl rand -base64 48로 생성한 새 값>
 
 PORT=5000
 ```

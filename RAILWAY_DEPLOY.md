@@ -59,11 +59,11 @@ Railway는 무료 티어를 제공하며, 풀스택 Node.js 앱을 간단하게 
 ```bash
 NODE_ENV=production
 
-DATABASE_URL=postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=<배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-NEON_DATABASE_URL=postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+NEON_DATABASE_URL=<배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-SESSION_SECRET=dankook-graduate-railway-2026-secure-secret-key
+SESSION_SECRET=<openssl rand -base64 48로 생성한 새 값>
 
 PORT=5000
 ```
@@ -224,7 +224,7 @@ railway init
 
 # 환경 변수 설정
 railway variables set DATABASE_URL="postgresql://..."
-railway variables set SESSION_SECRET="your-secret"
+railway variables set SESSION_SECRET="<openssl rand -base64 48로 생성한 새 값>"
 
 # 배포
 railway up

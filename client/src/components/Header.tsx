@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, LogIn, Menu, UserPlus } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, Menu, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import dkuLogo from "@assets/image_1767877726952.png";
+import { api } from "@/lib/api";
+import { notifyAuthChanged, useSession } from "@/hooks/use-session";
 
 interface HeaderProps {
   onLoginClick: () => void;
@@ -39,15 +41,22 @@ const navItems = [
 export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user: sessionUser } = useSession();
 
   const handleSignupClick = () => (onSignupClick ? onSignupClick() : onLoginClick());
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      notifyAuthChanged();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-[0_2px_10px_rgba(15,35,64,0.05)]">
       <div className="hidden border-b border-slate-200 bg-slate-50 md:block">
         <div className="mx-auto flex h-8 max-w-[1200px] items-center justify-end gap-5 px-8 text-xs font-semibold text-slate-600 lg:px-10">
-          <button type="button" onClick={handleSignupClick} className="transition-colors hover:text-[#2156D9]" data-testid="button-signup">회원가입</button>
-          <button type="button" onClick={onLoginClick} className="transition-colors hover:text-[#2156D9]" data-testid="button-login">로그인</button>
+          {sessionUser ? <><span>{sessionUser.username}</span><button type="button" onClick={handleLogout} className="transition-colors hover:text-[#2156D9]" data-testid="button-logout">로그아웃</button></> : <><button type="button" onClick={handleSignupClick} className="transition-colors hover:text-[#2156D9]" data-testid="button-signup">회원가입</button><button type="button" onClick={onLoginClick} className="transition-colors hover:text-[#2156D9]" data-testid="button-login">로그인</button></>}
           <a href="/#site-menu" className="transition-colors hover:text-[#2156D9]">사이트맵</a>
         </div>
       </div>
@@ -131,14 +140,7 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
               ))}
             </nav>
 
-            <div className="mt-6 grid grid-cols-2 gap-2">
-              <Button variant="outline" className="h-11 rounded-md font-bold" onClick={() => { setMobileOpen(false); handleSignupClick(); }}>
-                <UserPlus className="mr-2 h-4 w-4" />회원가입
-              </Button>
-              <Button className="h-11 rounded-md bg-[#2156D9] font-bold hover:bg-[#1848bc]" onClick={() => { setMobileOpen(false); onLoginClick(); }}>
-                <LogIn className="mr-2 h-4 w-4" />로그인
-              </Button>
-            </div>
+            {sessionUser ? <Button variant="outline" className="mt-6 h-11 w-full rounded-md font-bold" onClick={() => { setMobileOpen(false); void handleLogout(); }}><LogOut className="mr-2 h-4 w-4" />로그아웃</Button> : <div className="mt-6 grid grid-cols-2 gap-2"><Button variant="outline" className="h-11 rounded-md font-bold" onClick={() => { setMobileOpen(false); handleSignupClick(); }}><UserPlus className="mr-2 h-4 w-4" />회원가입</Button><Button className="h-11 rounded-md bg-[#2156D9] font-bold hover:bg-[#1848bc]" onClick={() => { setMobileOpen(false); onLoginClick(); }}><LogIn className="mr-2 h-4 w-4" />로그인</Button></div>}
           </SheetContent>
         </Sheet>
       </div>

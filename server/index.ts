@@ -1,26 +1,42 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { randomBytes } from "crypto";
 import { initializeStorage } from "./storage";
+import { pool } from "./db";
+import {
+  noStore,
+  isPasswordHash,
+  requestIdMiddleware,
+  requireSameOrigin,
+  type AppRole,
+} from "./security";
 
 const app = express();
 const httpServer = createServer(app);
 
-const MemoryStoreSession = MemoryStore(session);
 const sessionSecret = process.env.SESSION_SECRET ?? (
   process.env.NODE_ENV === "production"
     ? (() => { throw new Error("SESSION_SECRET is required in production"); })()
     : randomBytes(32).toString("hex")
 );
+if (process.env.NODE_ENV === "production" && sessionSecret.length < 32) {
+  throw new Error("SESSION_SECRET must contain at least 32 characters in production");
+}
 
-declare module "http" {
-  interface IncomingMessage {
-    rawBody: unknown;
-  }
+const hasAdminUsername = Boolean(process.env.ADMIN_USERNAME?.trim());
+const hasAdminPasswordHash = Boolean(process.env.ADMIN_PASSWORD_HASH?.trim());
+if (hasAdminUsername !== hasAdminPasswordHash) {
+  throw new Error("ADMIN_USERNAME and ADMIN_PASSWORD_HASH must be configured together");
+}
+if (hasAdminPasswordHash && !isPasswordHash(process.env.ADMIN_PASSWORD_HASH!.trim())) {
+  throw new Error("ADMIN_PASSWORD_HASH must use the supported scrypt format");
+}
+if (process.env.NODE_ENV === "production" && !hasAdminUsername) {
+  console.warn("Administrative login is disabled until secure administrator variables are configured");
 }
 
 declare module "express-session" {
@@ -28,41 +44,97 @@ declare module "express-session" {
     user?: {
       id: number;
       username: string;
+      name: string;
+      role: AppRole;
     };
+    createdAt?: number;
   }
 }
 
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
-app.use(express.urlencoded({ extended: false }));
+app.disable("x-powered-by");
+app.use(requestIdMiddleware);
+app.use(express.json({ limit: "256kb" }));
+app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=(), usb=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+
+  const contentSecurityPolicy = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self'",
+    ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : []),
+  ].join("; ");
+  res.setHeader("Content-Security-Policy", contentSecurityPolicy);
+
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
   next();
 });
 
+const PostgresSessionStore = connectPgSimple(session);
+
 app.use(session({
+  name: "dku.sid",
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: 30 * 60 * 1000,
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
   },
-  store: new MemoryStoreSession({
-    checkPeriod: 24 * 60 * 60 * 1000
+  store: new PostgresSessionStore({
+    pool,
+    tableName: "user_sessions",
+    createTableIfMissing: true,
+    pruneSessionInterval: 15 * 60,
+    errorLog: () => console.error("Persistent session store error"),
   }),
   resave: false,
   saveUninitialized: false,
-  secret: sessionSecret
+  rolling: true,
+  unset: "destroy",
+  secret: sessionSecret,
 }));
+
+app.use((req, res, next) => {
+  const absoluteSessionLifetime = 8 * 60 * 60 * 1000;
+  if (!req.session.user) return next();
+
+  if (!req.session.createdAt || Date.now() - req.session.createdAt > absoluteSessionLifetime) {
+    return req.session.destroy(() => {
+      res.clearCookie("dku.sid", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+      next();
+    });
+  }
+
+  next();
+});
+
+app.use("/api/users", noStore);
+app.use("/api/talents", noStore);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -78,37 +150,33 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
+      log(JSON.stringify({
+        requestId: req.requestId,
+        method: req.method,
+        path,
+        status: res.statusCode,
+        durationMs: duration,
+        actorId: req.session?.user?.id ?? null,
+        actorRole: req.session?.user?.role ?? null,
+      }));
     }
   });
 
   next();
 });
 
+app.use("/api", requireSameOrigin);
+
 (async () => {
   // Initialize storage (database or memory fallback)
   try {
     await initializeStorage();
   } catch (error) {
-    console.error("❌ CRITICAL ERROR: Failed to initialize storage:", error);
-    console.error("❌ Server cannot start without database connection!");
-    console.error("❌ Please check DATABASE_URL or NEON_DATABASE_URL environment variable");
+    console.error("CRITICAL: Failed to initialize storage", error instanceof Error ? error.name : "UnknownError");
     process.exit(1); // 서버 종료
   }
 
@@ -116,10 +184,22 @@ app.use((req, res, next) => {
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    const isClientError = status >= 400 && status < 500;
+    console.error(JSON.stringify({
+      type: "request_error",
+      requestId: _req.requestId,
+      status,
+      error: err instanceof Error ? err.name : "UnknownError",
+    }));
+    if (!res.headersSent) {
+      res.status(status).json({
+        error: isClientError ? "요청을 처리할 수 없습니다" : "서버 오류가 발생했습니다",
+        code: isClientError ? "INVALID_REQUEST" : "INTERNAL_ERROR",
+        requestId: _req.requestId,
+      });
+    } else {
+      _next(err);
+    }
   });
 
   // importantly only setup vite in development and after

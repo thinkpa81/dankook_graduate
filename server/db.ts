@@ -26,7 +26,7 @@ console.log(`Database connecting (NODE_ENV: ${process.env.NODE_ENV || 'developme
 export const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
+  console.error('Unexpected database pool error:', (err as NodeJS.ErrnoException).code || err.name);
 });
 
 export const db = drizzle(pool, { schema });
@@ -36,7 +36,7 @@ async function connectWithRetry(retries = 3, delay = 2000): Promise<pg.PoolClien
     try {
       return await pool.connect();
     } catch (err: any) {
-      console.error(`Database connection attempt ${i + 1} failed:`, err.message);
+      console.error(`Database connection attempt ${i + 1} failed:`, err.code || err.name || "DatabaseError");
       if (i < retries - 1) {
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
@@ -57,6 +57,9 @@ export async function ensureTablesExist() {
         password TEXT NOT NULL,
         name TEXT NOT NULL,
         email TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        status TEXT NOT NULL DEFAULT 'active',
+        password_reset_required BOOLEAN NOT NULL DEFAULT false,
         registered_at TEXT NOT NULL,
         registered_time TEXT NOT NULL
       );
@@ -74,6 +77,7 @@ export async function ensureTablesExist() {
       CREATE TABLE IF NOT EXISTS notice_comments (
         id SERIAL PRIMARY KEY,
         notice_id INTEGER NOT NULL,
+        user_id INTEGER,
         author TEXT NOT NULL,
         content TEXT NOT NULL,
         date TEXT NOT NULL
@@ -101,6 +105,7 @@ export async function ensureTablesExist() {
       CREATE TABLE IF NOT EXISTS paper_comments (
         id SERIAL PRIMARY KEY,
         paper_id INTEGER NOT NULL,
+        user_id INTEGER,
         author TEXT NOT NULL,
         content TEXT NOT NULL,
         date TEXT NOT NULL
@@ -116,9 +121,35 @@ export async function ensureTablesExist() {
         interested_major TEXT NOT NULL,
         motivation TEXT NOT NULL,
         registered_at TEXT NOT NULL,
-        registered_time TEXT NOT NULL
+        registered_time TEXT NOT NULL,
+        consent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        retention_until TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '2 years'
       );
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE notice_comments ADD COLUMN IF NOT EXISTS user_id INTEGER;
+      ALTER TABLE paper_comments ADD COLUMN IF NOT EXISTS user_id INTEGER;
+      ALTER TABLE talents ADD COLUMN IF NOT EXISTS consent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE talents ADD COLUMN IF NOT EXISTS retention_until TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '2 years';
+
+      CREATE INDEX IF NOT EXISTS idx_talents_retention_until ON talents(retention_until);
+      CREATE INDEX IF NOT EXISTS idx_notice_comments_user_id ON notice_comments(user_id);
+      CREATE INDEX IF NOT EXISTS idx_paper_comments_user_id ON paper_comments(user_id);
     `);
+
+    const invalidated = await client.query(`
+      UPDATE users
+      SET
+        password = 'disabled$' || md5(random()::text || clock_timestamp()::text || id::text),
+        password_reset_required = true
+      WHERE password NOT LIKE 'scrypt$v1$%'
+        AND password NOT LIKE 'disabled$%'
+    `);
+    if (invalidated.rowCount) {
+      console.warn(`Invalidated ${invalidated.rowCount} legacy plaintext password record(s)`);
+    }
     console.log("Database tables verified/created successfully");
   } catch (error) {
     console.error("Error ensuring tables exist:", error);

@@ -25,6 +25,7 @@ export interface IStorage {
   incrementNoticeViews(id: number): Promise<void>;
 
   getNoticeComments(noticeId: number): Promise<NoticeComment[]>;
+  getNoticeComment(id: number): Promise<NoticeComment | undefined>;
   createNoticeComment(comment: InsertNoticeComment): Promise<NoticeComment>;
   updateNoticeComment(id: number, content: string): Promise<NoticeComment | undefined>;
   deleteNoticeComment(id: number): Promise<void>;
@@ -37,6 +38,7 @@ export interface IStorage {
   incrementPaperViews(id: number): Promise<void>;
 
   getPaperComments(paperId: number): Promise<PaperComment[]>;
+  getPaperComment(id: number): Promise<PaperComment | undefined>;
   createPaperComment(comment: InsertPaperComment): Promise<PaperComment>;
   updatePaperComment(id: number, content: string): Promise<PaperComment | undefined>;
   deletePaperComment(id: number): Promise<void>;
@@ -213,13 +215,22 @@ export class MemoryStorage implements IStorage {
     return [...this.users].reverse();
   }
   async createUser(user: InsertUser): Promise<User> {
-    const newUser: User = { ...user, id: this.nextId.users++ };
+    const newUser: User = {
+      ...user,
+      id: this.nextId.users++,
+      role: "user",
+      status: "active",
+      passwordResetRequired: false,
+    };
     this.users.push(newUser);
     return newUser;
   }
   async updateUserPassword(id: number, password: string): Promise<void> {
     const user = this.users.find(u => u.id === id);
-    if (user) user.password = password;
+    if (user) {
+      user.password = password;
+      user.passwordResetRequired = false;
+    }
   }
   async deleteUser(id: number): Promise<void> {
     this.users = this.users.filter(u => u.id !== id);
@@ -261,8 +272,15 @@ export class MemoryStorage implements IStorage {
   async getNoticeComments(noticeId: number): Promise<NoticeComment[]> {
     return this.noticeComments.filter(c => c.noticeId === noticeId).reverse();
   }
+  async getNoticeComment(id: number): Promise<NoticeComment | undefined> {
+    return this.noticeComments.find(c => c.id === id);
+  }
   async createNoticeComment(comment: InsertNoticeComment): Promise<NoticeComment> {
-    const newComment: NoticeComment = { ...comment, id: this.nextId.noticeComments++ };
+    const newComment: NoticeComment = {
+      ...comment,
+      id: this.nextId.noticeComments++,
+      userId: comment.userId ?? null,
+    };
     this.noticeComments.push(newComment);
     return newComment;
   }
@@ -320,8 +338,15 @@ export class MemoryStorage implements IStorage {
   async getPaperComments(paperId: number): Promise<PaperComment[]> {
     return this.paperComments.filter(c => c.paperId === paperId).reverse();
   }
+  async getPaperComment(id: number): Promise<PaperComment | undefined> {
+    return this.paperComments.find(c => c.id === id);
+  }
   async createPaperComment(comment: InsertPaperComment): Promise<PaperComment> {
-    const newComment: PaperComment = { ...comment, id: this.nextId.paperComments++ };
+    const newComment: PaperComment = {
+      ...comment,
+      id: this.nextId.paperComments++,
+      userId: comment.userId ?? null,
+    };
     this.paperComments.push(newComment);
     return newComment;
   }
@@ -341,7 +366,15 @@ export class MemoryStorage implements IStorage {
     return this.talents.find(t => t.id === id);
   }
   async createTalent(talent: InsertTalent): Promise<Talent> {
-    const newTalent: Talent = { ...talent, id: this.nextId.talents++ };
+    const consentAt = talent.consentAt ?? new Date();
+    const retentionUntil = talent.retentionUntil ?? new Date(consentAt);
+    if (!talent.retentionUntil) retentionUntil.setUTCFullYear(retentionUntil.getUTCFullYear() + 2);
+    const newTalent: Talent = {
+      ...talent,
+      id: this.nextId.talents++,
+      consentAt,
+      retentionUntil,
+    };
     this.talents.push(newTalent);
     return newTalent;
   }
@@ -382,7 +415,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPassword(id: number, password: string): Promise<void> {
-    await this.db.update(users).set({ password }).where(eq(users.id, id));
+    await this.db
+      .update(users)
+      .set({ password, passwordResetRequired: false })
+      .where(eq(users.id, id));
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -422,6 +458,11 @@ export class DatabaseStorage implements IStorage {
 
   async getNoticeComments(noticeId: number): Promise<NoticeComment[]> {
     return await this.db.select().from(noticeComments).where(eq(noticeComments.noticeId, noticeId)).orderBy(desc(noticeComments.id));
+  }
+
+  async getNoticeComment(id: number): Promise<NoticeComment | undefined> {
+    const [comment] = await this.db.select().from(noticeComments).where(eq(noticeComments.id, id));
+    return comment || undefined;
   }
 
   async createNoticeComment(comment: InsertNoticeComment): Promise<NoticeComment> {
@@ -471,6 +512,11 @@ export class DatabaseStorage implements IStorage {
 
   async getPaperComments(paperId: number): Promise<PaperComment[]> {
     return await this.db.select().from(paperComments).where(eq(paperComments.paperId, paperId)).orderBy(desc(paperComments.id));
+  }
+
+  async getPaperComment(id: number): Promise<PaperComment | undefined> {
+    const [comment] = await this.db.select().from(paperComments).where(eq(paperComments.id, id));
+    return comment || undefined;
   }
 
   async createPaperComment(comment: InsertPaperComment): Promise<PaperComment> {
