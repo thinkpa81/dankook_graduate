@@ -31,6 +31,7 @@ import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 import { api, Paper, PaperComment } from "@/lib/api";
 import { toast } from "sonner";
+import { useSession } from "@/hooks/use-session";
 
 type CategoryKey = "conference" | "journal";
 
@@ -70,7 +71,6 @@ export default function Papers() {
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
   const [viewingPaper, setViewingPaper] = useState<Paper | null>(null);
   const [newComment, setNewComment] = useState("");
-  const [commentAuthor, setCommentAuthor] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
@@ -79,6 +79,8 @@ export default function Papers() {
     authors: "",
     websiteUrl: "",
   });
+  const { user: sessionUser } = useSession();
+  const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadPapers = async () => {
     try {
@@ -217,18 +219,19 @@ export default function Papers() {
   };
 
   const addComment = async () => {
-    if (!viewingPaper || !newComment.trim() || !commentAuthor.trim()) return;
+    if (!viewingPaper || !newComment.trim()) return;
+    if (!sessionUser) {
+      setLoginOpen(true);
+      return;
+    }
     try {
       const comment = await api.papers.addComment(viewingPaper.id, {
-        author: commentAuthor,
         content: newComment,
-        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
       });
       const updated = { ...viewingPaper, comments: [...viewingPaper.comments, comment] };
       setViewingPaper(updated);
       setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
       setNewComment("");
-      setCommentAuthor("");
     } catch (e) {
       console.error("Failed to add comment", e);
     }
@@ -299,9 +302,7 @@ export default function Papers() {
               <Button variant="outline" onClick={() => { setShowAll(!showAll); setCurrentPage(1); }} className="rounded-lg font-semibold px-4 h-11">
                 <Eye className="w-4 h-4 mr-2" />{showAll ? "페이지별 보기" : "전체보기"}
               </Button>
-              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11">
-                <Plus className="w-4 h-4 mr-2" />등록
-              </Button>
+              {isAdmin && <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11"><Plus className="w-4 h-4 mr-2" />등록</Button>}
             </div>
           </div>
 
@@ -341,10 +342,7 @@ export default function Papers() {
                           <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(paper)}><Pencil className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
+                      {isAdmin && <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(paper)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)}><Trash2 className="w-4 h-4" /></Button></div>}
                     </div>
                   </CardContent>
                 </Card>
@@ -391,8 +389,10 @@ export default function Papers() {
                     return (
                       <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
                         <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-slate-500" aria-hidden="true" /><span className="text-sm font-medium text-gray-700">{displayName}</span></div>
-                        {downloadUrl ? (
+                        {downloadUrl && sessionUser ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors"><Download className="w-4 h-4" />다운로드</a>
+                        ) : downloadUrl ? (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className="text-primary">로그인 후 다운로드</Button>
                         ) : (
                           <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
@@ -417,8 +417,7 @@ export default function Papers() {
                         <span className="font-bold text-sm">{comment.author}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">{comment.date}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button>
+                          {comment.canEdit && <><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button></>}
                         </div>
                       </div>
                       <p className="text-sm text-gray-600">{comment.content}</p>
@@ -426,10 +425,7 @@ export default function Papers() {
                   )}
                 </div>
               ))}
-              <div className="space-y-2 mt-4">
-                <Input placeholder="이름을 입력하세요" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} className="h-10 rounded-lg text-base" />
-                <div className="flex gap-2"><Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" /><Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button></div>
-              </div>
+              {sessionUser ? <div className="space-y-2 mt-4"><p className="text-sm text-gray-500">{sessionUser.username} 계정으로 댓글이 등록됩니다.</p><div className="flex gap-2"><Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" /><Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button></div></div> : <Button type="button" variant="outline" onClick={() => setLoginOpen(true)} className="mt-4">로그인 후 댓글 작성</Button>}
             </div>
           </div>
         </DialogContent>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
+import { notifyAuthChanged } from "@/hooks/use-session";
 
 interface LoginModalProps {
   open: boolean;
@@ -41,6 +42,7 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
     setLoading(true);
     try {
       const user = await api.users.login(loginData.username, loginData.password);
+      notifyAuthChanged();
       setSuccess(`${user.name}님, 환영합니다!`);
       setTimeout(() => {
         onOpenChange(false);
@@ -48,7 +50,9 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
         setSuccess("");
       }, 1500);
     } catch (err: any) {
-      if (err.message === "Invalid credentials") {
+      if (err.message?.includes("비밀번호 재설정")) {
+        setError("기존 계정은 보안상 비밀번호 재설정이 필요합니다. 관리자에게 문의해주세요.");
+      } else if (err.message?.includes("아이디 또는 비밀번호")) {
         setError("아이디 또는 비밀번호가 올바르지 않습니다.");
       } else {
         setError("로그인 중 오류가 발생했습니다.");
@@ -68,21 +72,18 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
       setError("비밀번호가 일치하지 않습니다.");
       return;
     }
-    if (signupData.password.length < 6) {
-      setError("비밀번호는 6자 이상이어야 합니다.");
+    if (signupData.password.length < 10) {
+      setError("비밀번호는 10자 이상이어야 합니다.");
       return;
     }
     
     setLoading(true);
     try {
-      const now = new Date();
       await api.users.create({
         username: signupData.username,
         password: signupData.password,
         name: signupData.name,
         email: signupData.email,
-        registeredAt: now.toISOString().split('T')[0].replace(/-/g, '.'),
-        registeredTime: now.toTimeString().slice(0, 5),
       });
       
       setSuccess("회원가입이 완료되었습니다! 로그인해주세요.");
@@ -92,7 +93,7 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
         setSuccess("");
       }, 1500);
     } catch (err: any) {
-      if (err.message === "Username already exists") {
+      if (err.message.includes("이미 사용 중")) {
         setError("이미 사용 중인 아이디입니다.");
       } else {
         setError("회원가입 중 오류가 발생했습니다.");
@@ -205,7 +206,7 @@ export default function LoginModal({ open, onOpenChange, defaultTab = "login" }:
               />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold">비밀번호 * (6자 이상)</Label>
+                <Label className="font-bold">비밀번호 * (10자 이상)</Label>
               <Input
                 type="password"
                 placeholder="비밀번호를 입력하세요"

@@ -100,9 +100,9 @@ Instance Type: Free (무료 선택)
 | Key | Value |
 |-----|-------|
 | `NODE_ENV` | `production` |
-| `DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require` |
-| `NEON_DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require` |
-| `SESSION_SECRET` | `dankook-render-secure-secret-2026` |
+| `DATABASE_URL` | 배포 플랫폼의 비밀 변수에 저장한 새 연결 문자열 |
+| `NEON_DATABASE_URL` | 배포 플랫폼의 비밀 변수에 저장한 새 연결 문자열 |
+| `SESSION_SECRET` | `openssl rand -base64 48`로 새로 생성한 값 |
 
 **중요:** 
 - 각 변수를 하나씩 추가하세요

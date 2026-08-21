@@ -35,8 +35,8 @@ GitHub 저장소 페이지에서:
 ```
 CLOUDFLARE_API_TOKEN = (1단계에서 생성한 API 토큰)
 CLOUDFLARE_ACCOUNT_ID = (1단계에서 확인한 Account ID)
-DATABASE_URL = postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-NEON_DATABASE_URL = postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
+NEON_DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 SESSION_SECRET = your-secure-random-secret-key-here
 ```
 
@@ -87,9 +87,9 @@ Root directory: (비워둠)
 **Production 환경에 추가:**
 
 ```
-DATABASE_URL = postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-NEON_DATABASE_URL = postgresql://neondb_owner:npg_9zYRHW3dyVlX@ep-calm-scene-a1aaqtdy-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+NEON_DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
 SESSION_SECRET = your-secure-random-secret-key-here
 

@@ -169,10 +169,10 @@ SELECT id, title, date FROM notices ORDER BY id DESC LIMIT 5;
 
 | Key | Value | 상태 |
 |-----|-------|------|
-| `DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW...` | ✅ 설정됨 |
-| `NEON_DATABASE_URL` | `postgresql://neondb_owner:npg_9zYRHW...` | ✅ 설정됨 |
+| `DATABASE_URL` | 배포 플랫폼 비밀 변수(값 비공개) | ✅ 설정됨 |
+| `NEON_DATABASE_URL` | 배포 플랫폼 비밀 변수(값 비공개) | ✅ 설정됨 |
 | `NODE_ENV` | `production` | ✅ 설정됨 |
-| `SESSION_SECRET` | `dankook-render-secure-2020` | ✅ 설정됨 |
+| `SESSION_SECRET` | 배포 플랫폼 비밀 변수(값 비공개) | ✅ 설정됨 |
 
 **검증 결과:**
 - ✅ 모든 필수 환경 변수 설정 완료

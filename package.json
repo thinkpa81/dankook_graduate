@@ -10,6 +10,8 @@
     "build": "node script/build.js",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
+    "test:security": "node --import tsx script/security-smoke.ts",
+    "security:hash-password": "node --import tsx script/hash-admin-password.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx seed-database.ts"
   },

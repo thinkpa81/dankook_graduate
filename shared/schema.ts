@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  role: text("role").notNull().default("user"),
+  status: text("status").notNull().default("active"),
+  passwordResetRequired: boolean("password_reset_required").notNull().default(false),
   registeredAt: text("registered_at").notNull(),
   registeredTime: text("registered_time").notNull(),
 });
@@ -17,7 +20,12 @@ export const users = pgTable("users", {
 export const usersRelations = relations(users, ({ many }) => ({
 }));
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  role: true,
+  status: true,
+  passwordResetRequired: true,
+});
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -42,6 +50,7 @@ export type Notice = typeof notices.$inferSelect;
 export const noticeComments = pgTable("notice_comments", {
   id: serial("id").primaryKey(),
   noticeId: integer("notice_id").notNull(),
+  userId: integer("user_id"),
   author: text("author").notNull(),
   content: text("content").notNull(),
   date: text("date").notNull(),
@@ -85,6 +94,7 @@ export type Paper = typeof papers.$inferSelect;
 export const paperComments = pgTable("paper_comments", {
   id: serial("id").primaryKey(),
   paperId: integer("paper_id").notNull(),
+  userId: integer("user_id"),
   author: text("author").notNull(),
   content: text("content").notNull(),
   date: text("date").notNull(),
@@ -109,6 +119,10 @@ export const talents = pgTable("talents", {
   motivation: text("motivation").notNull(),
   registeredAt: text("registered_at").notNull(),
   registeredTime: text("registered_time").notNull(),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull().defaultNow(),
+  retentionUntil: timestamp("retention_until", { withTimezone: true })
+    .notNull()
+    .default(sql`NOW() + INTERVAL '2 years'`),
 });
 
 export const insertTalentSchema = createInsertSchema(talents).omit({ id: true });
