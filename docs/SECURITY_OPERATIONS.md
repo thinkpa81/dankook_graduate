@@ -1,20 +1,22 @@
 # 보안 운영 설정
 
-## 배포 전 필수 환경 변수
+## 배포 환경 변수
 
-- `SESSION_SECRET`: 32바이트 이상의 예측 불가능한 값
+- `SESSION_SECRET`: 32바이트 이상의 예측 불가능한 값. 새 Render Blueprint에는 256비트 난수로 자동 생성된다.
 - `PUBLIC_ORIGIN`: `https://dankook-graduate.onrender.com`
 - `ADMIN_USERNAME`: 새 관리자 아이디
 - `ADMIN_PASSWORD_HASH`: `npm run security:hash-password`로 생성한 scrypt 해시
 
 `ADMIN_USERNAME`과 `ADMIN_PASSWORD_HASH` 중 하나만 설정하면 서버가 시작되지 않는다. 둘 다 설정하지 않으면 공개 열람 기능은 유지되지만 관리자 로그인이 비활성화된다. 과거 브라우저 코드에 포함됐던 관리자 값은 더 이상 인증에 사용되지 않으며 반드시 폐기·교체해야 한다.
 
+기존 Render 서비스에서 `SESSION_SECRET`이 없거나 32바이트보다 짧으면 서버는 기동을 중단하지 않고 프로세스 메모리에 384비트 임시 난수를 자동 생성한다. 이 값은 저장소·로그·클라이언트에 노출되지 않지만 서비스 재시작 시 로그인 세션이 만료된다. 영속 로그인 세션이 필요할 때만 Render에 32바이트 이상의 값을 직접 설정한다.
+
 ## 배포 순서
 
 1. 저장소 이력에 포함된 적이 있는 데이터베이스 계정의 비밀번호를 Neon에서 즉시 교체하고 Render의 `DATABASE_URL`/`NEON_DATABASE_URL`을 새 연결 문자열로 갱신한다.
 2. 로컬의 신뢰할 수 있는 터미널에서 `npm run security:hash-password`를 실행한다.
 3. Render 환경 변수에 새 관리자 아이디와 출력된 해시를 저장한다. 평문 비밀번호는 저장하지 않는다.
-4. `SESSION_SECRET`을 `openssl rand -base64 48`로 생성한 새 값으로 교체해 기존 세션을 모두 폐기한다.
+4. 영속 로그인 세션이 필요한 경우 `SESSION_SECRET`을 `openssl rand -base64 48`로 생성한 새 값으로 교체해 기존 세션을 모두 폐기한다. 별도 설정이 없으면 안전한 임시 난수가 자동 적용된다.
 5. 배포 후 관리자 로그인, 회원/인재풀 목록의 비인증 차단(401), 일반 사용자의 관리자 쓰기 차단(403)을 확인한다.
 6. 기존 회원은 과거 평문 비밀번호가 자동 폐기되므로 관리자 화면에서 새 비밀번호를 발급한다.
 

@@ -3,6 +3,12 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 export type AppRole = "ADMIN" | "USER";
 
+export type SessionSecretResolution = {
+  secret: string;
+  source: "configured" | "generated";
+  reason: "missing" | "too_short" | null;
+};
+
 declare global {
   namespace Express {
     interface Request {
@@ -16,6 +22,24 @@ const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_KEY_LENGTH = 64;
 const PASSWORD_HASH_PREFIX = "scrypt$v1$";
+
+export function resolveSessionSecret(
+  configuredValue: string | undefined,
+  isProduction: boolean,
+): SessionSecretResolution {
+  const configured = configuredValue?.trim();
+  const isLongEnough = configured && Buffer.byteLength(configured, "utf8") >= 32;
+
+  if (configured && (!isProduction || isLongEnough)) {
+    return { secret: configured, source: "configured", reason: null };
+  }
+
+  return {
+    secret: randomBytes(48).toString("base64url"),
+    source: "generated",
+    reason: configured ? "too_short" : "missing",
+  };
+}
 
 function derivePasswordKey(
   password: string,
