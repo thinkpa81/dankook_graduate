@@ -44,7 +44,6 @@ const ITEMS_PER_PAGE = 5;
 
 export default function Notices() {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -303,7 +302,7 @@ export default function Notices() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} />
 
       <PageHero
         eyebrow="NOTICES"
@@ -355,14 +354,14 @@ export default function Notices() {
                   <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{displayNumber}</div>
                   <div className="col-span-1 md:col-span-6 flex items-center gap-2">
                     {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
-                    <span className="font-medium text-gray-900 hover:text-primary transition-colors cursor-pointer text-base" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</span>
+                    <button type="button" className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</button>
                     {notice.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{notice.comments.length}</span>}
                   </div>
                   <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500"><Calendar className="w-4 h-4 mr-1.5 md:hidden" />{notice.date}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500"><Eye className="w-4 h-4 mr-1.5 md:hidden" />{notice.views}</div>
                   <div className="hidden md:flex col-span-1 items-center justify-center gap-1">{notice.files.length > 0 && <span className="flex items-center gap-1 text-xs text-gray-500"><FileText className="w-4 h-4 text-primary" />{notice.files.length}</span>}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
-                    {isAdmin && <><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(notice)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteId(notice.id)}><Trash2 className="w-4 h-4" /></Button></>}
+                    {isAdmin && <><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100" onClick={() => openEdit(notice)} aria-label={`${notice.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100" onClick={() => setDeleteId(notice.id)} aria-label={`${notice.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></>}
                   </div>
                 </div>
               )})}
@@ -593,7 +592,6 @@ export default function Notices() {
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
-      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }

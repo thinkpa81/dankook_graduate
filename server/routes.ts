@@ -1,6 +1,6 @@
 import type { Express, NextFunction, Request, RequestHandler, Response } from "express";
 import type { Server } from "http";
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import fs from "fs";
 import multer from "multer";
 import path from "path";
@@ -51,8 +51,7 @@ const loginLimiter = rateLimit({
   max: 5,
   message: "로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요",
 });
-const signupLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
-const talentLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3 });
+const bootstrapLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
 const commentLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10 });
 const viewLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120 });
 const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
@@ -60,8 +59,8 @@ const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 const usernameSchema = z.string().trim().min(4).max(32).regex(/^[A-Za-z0-9._-]+$/);
 const passwordSchema = z.string().min(10).max(128);
 const nameSchema = z.string().trim().min(1).max(80);
-const emailSchema = z.string().trim().email().max(254).transform(value => value.toLowerCase());
 const dateSchema = z.string().trim().regex(/^\d{4}[.-]\d{2}[.-]\d{2}$/);
+const isoDateSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/);
 const fileReferenceSchema = z.string().trim().max(300).refine(value => {
   if (!value.startsWith("/uploads/")) return false;
   const filename = value.slice("/uploads/".length);
@@ -73,11 +72,13 @@ const fileReferenceSchema = z.string().trim().max(300).refine(value => {
 });
 const websiteSchema = z.string().trim().max(2_048).refine(isSafeHttpUrl);
 
-const signupSchema = z.object({
+const adminCreateSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
   name: nameSchema,
-  email: emailSchema,
+});
+const bootstrapSetupSchema = adminCreateSchema.extend({
+  setupCode: z.string().trim().min(32).max(128),
 });
 const loginSchema = z.object({ username: usernameSchema, password: z.string().min(1).max(128) });
 const passwordResetSchema = z.object({ password: passwordSchema });
@@ -116,18 +117,22 @@ const paperUpdateSchema = paperCreateSchema
   .partial()
   .refine(value => Object.keys(value).length > 0);
 
-const talentCreateSchema = z.object({
-  name: nameSchema,
-  email: emailSchema,
-  phone: z.string().trim().min(7).max(30),
-  education: z.string().trim().min(1).max(80),
-  major: z.string().trim().min(1).max(120),
-  interestedMajor: z.string().trim().min(1).max(120),
-  motivation: z.string().trim().max(2_000),
-  consent: z.literal(true),
+const httpsAttachmentSchema = z.string().trim().max(2_048).refine(value => {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}, "첨부 주소는 HTTPS 주소여야 합니다");
+const admissionGuidelineCreateSchema = z.object({
+  title: z.string().trim().min(1).max(300),
+  content: z.string().trim().max(20_000),
+  organization: z.string().trim().min(1).max(120),
+  date: isoDateSchema,
+  attachmentUrl: httpsAttachmentSchema.nullable().optional(),
+  attachmentName: z.string().trim().min(1).max(255).nullable().optional(),
 });
-const talentUpdateSchema = talentCreateSchema
-  .omit({ consent: true })
+const admissionGuidelineUpdateSchema = admissionGuidelineCreateSchema
   .partial()
   .refine(value => Object.keys(value).length > 0);
 const commentSchema = z.object({ content: z.string().trim().min(1).max(2_000) });
@@ -159,6 +164,10 @@ function parseId(req: Request, res: Response): number | null {
   return result.data;
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
 function publicComment<T extends { userId?: number | null }>(req: Request, comment: T) {
   const { userId: _userId, ...dto } = comment;
   return {
@@ -168,11 +177,10 @@ function publicComment<T extends { userId?: number | null }>(req: Request, comme
   };
 }
 
-function publicUser(user: {
+function publicAdmin(user: {
   id: number;
   username: string;
   name: string;
-  email: string;
   role: string;
   status: string;
   passwordResetRequired: boolean;
@@ -183,13 +191,22 @@ function publicUser(user: {
     id: user.id,
     username: user.username,
     name: user.name,
-    email: user.email,
     role: user.role,
     status: user.status,
     passwordResetRequired: user.passwordResetRequired,
     registeredAt: user.registeredAt,
     registeredTime: user.registeredTime,
   };
+}
+
+function publicSessionUser(user: {
+  id: number;
+  username: string;
+  name: string;
+  role: "ADMIN" | "USER";
+  authVersion: number;
+}) {
+  return { id: user.id, username: user.username, name: user.name, role: user.role };
 }
 
 function isMagicNumberValid(file: Express.Multer.File): boolean {
@@ -222,6 +239,12 @@ function sessionSave(req: Request): Promise<void> {
   });
 }
 
+function sessionDestroy(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.destroy(error => error ? reject(error) : resolve());
+  });
+}
+
 function currentKoreanDateTime() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
@@ -243,9 +266,67 @@ const dummyPasswordHash = hashPassword(randomBytes(32).toString("hex"));
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   const storage = getStorage();
-  const adminOnly = requireRole("ADMIN");
+  const configuredAdminUsername = process.env.ADMIN_USERNAME?.trim();
+  const configuredAdminHash = process.env.ADMIN_PASSWORD_HASH?.trim();
+  const hasConfiguredAdmin = Boolean(configuredAdminUsername && configuredAdminHash);
+  const adminOnly: RequestHandler = (req, res, next) => {
+    requireRole("ADMIN")(req, res, () => {
+      const sessionUser = req.session.user!;
+      if (sessionUser.id === 0) {
+        if (hasConfiguredAdmin && sessionUser.username === configuredAdminUsername) return next();
+        return res.status(403).json({ error: "관리자 세션을 다시 확인해주세요", code: "ADMIN_SESSION_INVALID" });
+      }
+      storage.getUser(sessionUser.id)
+        .then(user => {
+          if (!user || user.status !== "active" || user.role.toLowerCase() !== "admin") {
+            return res.status(403).json({ error: "활성 관리자 계정이 아닙니다", code: "ADMIN_ACCOUNT_INACTIVE" });
+          }
+          if (user.authVersion !== sessionUser.authVersion) {
+            return sessionDestroy(req)
+              .then(() => res.status(401).json({ error: "보안을 위해 다시 로그인해주세요", code: "ADMIN_SESSION_STALE" }))
+              .catch(next);
+          }
+          next();
+        })
+        .catch(next);
+    });
+  };
 
-  app.get("/uploads/:filename", requireAuth, asyncHandler(async (req, res) => {
+  const bootstrapTtlMs = 15 * 60 * 1000;
+  let bootstrapCode: string | null = null;
+  let bootstrapExpiresAt = 0;
+  let bootstrapInProgress = false;
+
+  async function bootstrapRequired(): Promise<boolean> {
+    return !hasConfiguredAdmin && await storage.getActiveAdminCount() === 0;
+  }
+
+  async function ensureBootstrapCode(): Promise<void> {
+    if (!await bootstrapRequired()) {
+      bootstrapCode = null;
+      bootstrapExpiresAt = 0;
+      return;
+    }
+    if (bootstrapCode && bootstrapExpiresAt > Date.now()) return;
+    bootstrapCode = randomBytes(32).toString("base64url");
+    bootstrapExpiresAt = Date.now() + bootstrapTtlMs;
+    console.warn(JSON.stringify({
+      type: "admin_bootstrap",
+      message: "No active administrator exists. Use this one-time setup code within 15 minutes.",
+      setupCode: bootstrapCode,
+      expiresAt: new Date(bootstrapExpiresAt).toISOString(),
+    }));
+  }
+
+  await ensureBootstrapCode();
+
+  app.use(["/api/admins", "/api/admin-bootstrap"], (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+    next();
+  });
+
+  app.get("/uploads/:filename", adminOnly, asyncHandler(async (req, res) => {
     const filename = req.params.filename;
     const extension = path.extname(filename).toLowerCase();
     if (!filename || filename.length > 255 || path.basename(filename) !== filename || !FILE_TYPES[extension]) {
@@ -301,33 +382,147 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
   });
 
-  app.get("/api/users", adminOnly, asyncHandler(async (_req, res) => {
-    res.json((await storage.getUsers()).map(publicUser));
+  app.get("/api/admin-bootstrap/status", asyncHandler(async (_req, res) => {
+    const required = await bootstrapRequired();
+    if (required) await ensureBootstrapCode();
+    return res.json({
+      required,
+      expiresAt: required && bootstrapExpiresAt > Date.now()
+        ? new Date(bootstrapExpiresAt).toISOString()
+        : null,
+    });
   }));
 
-  app.post("/api/users", signupLimiter, asyncHandler(async (req, res) => {
-    const input = parseBody(signupSchema, req, res);
+  app.post("/api/admin-bootstrap/setup", bootstrapLimiter, asyncHandler(async (req, res) => {
+    const input = parseBody(bootstrapSetupSchema, req, res);
+    if (!input) return;
+    if (!await bootstrapRequired()) {
+      return res.status(409).json({ error: "관리자 초기 설정이 이미 완료되었습니다", code: "BOOTSTRAP_NOT_REQUIRED" });
+    }
+    if (bootstrapInProgress) {
+      return res.status(409).json({ error: "관리자 초기 설정이 진행 중입니다", code: "BOOTSTRAP_IN_PROGRESS" });
+    }
+    if (!bootstrapCode || bootstrapExpiresAt <= Date.now()) {
+      bootstrapCode = null;
+      bootstrapExpiresAt = 0;
+      return res.status(410).json({ error: "초기 설정 코드가 만료되었습니다. 서버 로그에서 새 코드를 확인해주세요", code: "BOOTSTRAP_EXPIRED" });
+    }
+    const provided = Buffer.from(input.setupCode);
+    const expected = Buffer.from(bootstrapCode);
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      auditEvent(req, "admin.bootstrap_failed");
+      return res.status(401).json({ error: "초기 설정 코드가 올바르지 않습니다", code: "BOOTSTRAP_CODE_INVALID" });
+    }
+    bootstrapInProgress = true;
+    try {
+      const result = await storage.createFirstAdminSafely({
+        username: input.username,
+        password: await hashPassword(input.password),
+        name: input.name,
+        ...currentKoreanDateTime(),
+      });
+      if (result.status === "already_exists") {
+        bootstrapCode = null;
+        bootstrapExpiresAt = 0;
+        return res.status(409).json({ error: "관리자 초기 설정이 이미 완료되었습니다", code: "BOOTSTRAP_NOT_REQUIRED" });
+      }
+      const admin = result.admin;
+      bootstrapCode = null;
+      bootstrapExpiresAt = 0;
+      await sessionRegenerate(req);
+      req.session.user = { id: admin.id, username: admin.username, name: admin.name, role: "ADMIN", authVersion: admin.authVersion };
+      req.session.createdAt = Date.now();
+      await sessionSave(req);
+      auditEvent(req, "admin.bootstrap_complete", `admin:${admin.id}`);
+      return res.status(201).json(publicAdmin(admin));
+    } finally {
+      bootstrapInProgress = false;
+    }
+  }));
+
+  app.get("/api/admins", adminOnly, asyncHandler(async (_req, res) => {
+    const admins = (await storage.getAdmins()).map(publicAdmin);
+    return res.json(admins);
+  }));
+
+  app.post("/api/admins", adminOnly, asyncHandler(async (req, res) => {
+    const input = parseBody(adminCreateSchema, req, res);
     if (!input) return;
     if (await storage.getUserByUsername(input.username)) {
       return res.status(409).json({ error: "이미 사용 중인 아이디입니다", code: "USERNAME_TAKEN" });
     }
-    const user = await storage.createUser({
-      username: input.username,
-      password: await hashPassword(input.password),
-      name: input.name,
-      email: input.email,
-      ...currentKoreanDateTime(),
-    });
-    auditEvent(req, "user.signup", `user:${user.id}`);
-    return res.status(201).json(publicUser(user));
+    let admin;
+    try {
+      admin = await storage.createAdmin({
+        username: input.username,
+        password: await hashPassword(input.password),
+        name: input.name,
+        ...currentKoreanDateTime(),
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return res.status(409).json({ error: "이미 사용 중인 아이디입니다", code: "USERNAME_TAKEN" });
+      }
+      throw error;
+    }
+    auditEvent(req, "admin.create", `admin:${admin.id}`);
+    return res.status(201).json(publicAdmin(admin));
+  }));
+
+  app.patch("/api/admins/:id/password", adminOnly, asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    const input = parseBody(passwordResetSchema, req, res);
+    if (!id || !input) return;
+    const admin = await storage.getUser(id);
+    if (!admin || admin.role.toLowerCase() !== "admin") {
+      return res.status(404).json({ error: "관리자를 찾을 수 없습니다", code: "ADMIN_NOT_FOUND" });
+    }
+    await storage.updateUserPassword(id, await hashPassword(input.password));
+    auditEvent(req, "admin.password_reset", `admin:${id}`);
+    if (req.session.user!.id === id) {
+      await sessionDestroy(req);
+      res.clearCookie("dku.sid", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+      return res.json({ success: true, reauthenticationRequired: true });
+    }
+    return res.json({ success: true });
+  }));
+
+  app.delete("/api/admins/:id", adminOnly, asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    if (!id) return;
+    if (req.session.user!.id === id) {
+      return res.status(409).json({ error: "현재 로그인한 관리자 계정은 삭제할 수 없습니다", code: "SELF_DELETE_BLOCKED" });
+    }
+    const result = await storage.deleteAdminSafely(id, hasConfiguredAdmin);
+    if (result === "not_found") {
+      return res.status(404).json({ error: "관리자를 찾을 수 없습니다", code: "ADMIN_NOT_FOUND" });
+    }
+    if (result === "last_admin") {
+      return res.status(409).json({ error: "마지막 활성 관리자 계정은 삭제할 수 없습니다", code: "LAST_ADMIN_BLOCKED" });
+    }
+    auditEvent(req, "admin.delete", `admin:${id}`);
+    return res.json({ success: true });
+  }));
+
+  app.get("/api/users", adminOnly, (_req, res) => res.status(410).json({
+    error: "회원 관리 기능은 관리자 관리 기능으로 대체되었습니다",
+    code: "USER_API_RETIRED",
+  }));
+
+  app.post("/api/users", (_req, res) => res.status(410).json({
+    error: "공개 회원가입은 제공하지 않습니다",
+    code: "SIGNUP_DISABLED",
   }));
 
   app.post("/api/users/login", loginLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(loginSchema, req, res);
     if (!input) return;
 
-    const configuredAdminUsername = process.env.ADMIN_USERNAME?.trim();
-    const configuredAdminHash = process.env.ADMIN_PASSWORD_HASH?.trim();
     if (configuredAdminUsername && input.username === configuredAdminUsername) {
       const valid = configuredAdminHash
         ? await verifyPassword(input.password, configuredAdminHash)
@@ -337,11 +532,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "아이디 또는 비밀번호가 올바르지 않습니다", code: "INVALID_CREDENTIALS" });
       }
       await sessionRegenerate(req);
-      req.session.user = { id: 0, username: configuredAdminUsername, name: "관리자", role: "ADMIN" };
+      req.session.user = { id: 0, username: configuredAdminUsername, name: "관리자", role: "ADMIN", authVersion: 0 };
       req.session.createdAt = Date.now();
       await sessionSave(req);
       auditEvent(req, "auth.login_success", "admin");
-      return res.json(req.session.user);
+      return res.json(publicSessionUser(req.session.user));
     }
 
     const user = await storage.getUserByUsername(input.username);
@@ -350,7 +545,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       auditEvent(req, "auth.login_failed", "user");
       return res.status(401).json({ error: "아이디 또는 비밀번호가 올바르지 않습니다", code: "INVALID_CREDENTIALS" });
     }
-    if (user.status !== "active") {
+    if (user.status !== "active" || user.role.toLowerCase() !== "admin") {
       return res.status(403).json({ error: "사용할 수 없는 계정입니다", code: "ACCOUNT_DISABLED" });
     }
     if (user.passwordResetRequired || !isPasswordHash(user.password)) {
@@ -365,12 +560,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role === "admin" ? "ADMIN" : "USER",
+      role: "ADMIN",
+      authVersion: user.authVersion,
     };
     req.session.createdAt = Date.now();
     await sessionSave(req);
     auditEvent(req, "auth.login_success", `user:${user.id}`);
-    return res.json(req.session.user);
+    return res.json(publicSessionUser(req.session.user));
   }));
 
   app.post("/api/users/logout", requireAuth, (req, res) => {
@@ -387,25 +583,94 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
   });
 
-  app.get("/api/users/me", requireAuth, (req, res) => res.json(req.session.user));
+  app.get("/api/users/me", requireAuth, asyncHandler(async (req, res) => {
+    const sessionUser = req.session.user!;
+    if (sessionUser.id === 0) {
+      if (hasConfiguredAdmin && sessionUser.username === configuredAdminUsername) {
+        return res.json(publicSessionUser(sessionUser));
+      }
+    } else {
+      const user = await storage.getUser(sessionUser.id);
+      if (user
+        && user.status === "active"
+        && user.role.toLowerCase() === "admin"
+        && isPasswordHash(user.password)
+        && !user.passwordResetRequired
+        && user.authVersion === sessionUser.authVersion) {
+        return res.json(publicSessionUser(sessionUser));
+      }
+    }
+    await sessionDestroy(req);
+    res.clearCookie("dku.sid", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    return res.status(401).json({ error: "로그인이 만료되었습니다", code: "SESSION_EXPIRED" });
+  }));
 
-  app.patch("/api/users/:id/password", adminOnly, asyncHandler(async (req, res) => {
+  app.patch("/api/users/:id/password", adminOnly, (_req, res) => res.status(410).json({ error: "관리자 비밀번호 재설정 API를 이용해주세요", code: "USER_API_RETIRED" }));
+  app.delete("/api/users/:id", adminOnly, (_req, res) => res.status(410).json({ error: "관리자 관리 API를 이용해주세요", code: "USER_API_RETIRED" }));
+
+  app.get("/api/admissions", asyncHandler(async (_req, res) => {
+    return res.json(await storage.getAdmissionGuidelines());
+  }));
+
+  app.get("/api/admissions/:id", asyncHandler(async (req, res) => {
     const id = parseId(req, res);
-    const input = parseBody(passwordResetSchema, req, res);
+    if (!id) return;
+    const guideline = await storage.getAdmissionGuideline(id);
+    if (!guideline) {
+      return res.status(404).json({ error: "모집요강을 찾을 수 없습니다", code: "ADMISSION_NOT_FOUND" });
+    }
+    return res.json(guideline);
+  }));
+
+  app.post("/api/admissions", adminOnly, asyncHandler(async (req, res) => {
+    const input = parseBody(admissionGuidelineCreateSchema, req, res);
+    if (!input) return;
+    const guideline = await storage.createAdmissionGuideline({
+      ...input,
+      views: 0,
+      attachmentUrl: input.attachmentUrl ?? null,
+      attachmentName: input.attachmentName ?? null,
+    });
+    auditEvent(req, "admission.create", `admission:${guideline.id}`);
+    return res.status(201).json(guideline);
+  }));
+
+  app.patch("/api/admissions/:id", adminOnly, asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    const input = parseBody(admissionGuidelineUpdateSchema, req, res);
     if (!id || !input) return;
-    if (!await storage.getUser(id)) return res.status(404).json({ error: "회원을 찾을 수 없습니다", code: "USER_NOT_FOUND" });
-    await storage.updateUserPassword(id, await hashPassword(input.password));
-    auditEvent(req, "user.password_reset", `user:${id}`);
+    const guideline = await storage.updateAdmissionGuideline(id, input);
+    if (!guideline) {
+      return res.status(404).json({ error: "모집요강을 찾을 수 없습니다", code: "ADMISSION_NOT_FOUND" });
+    }
+    auditEvent(req, "admission.update", `admission:${id}`);
+    return res.json(guideline);
+  }));
+
+  app.delete("/api/admissions/:id", adminOnly, asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    if (!id) return;
+    if (!await storage.getAdmissionGuideline(id)) {
+      return res.status(404).json({ error: "모집요강을 찾을 수 없습니다", code: "ADMISSION_NOT_FOUND" });
+    }
+    await storage.deleteAdmissionGuideline(id);
+    auditEvent(req, "admission.delete", `admission:${id}`);
     return res.json({ success: true });
   }));
 
-  app.delete("/api/users/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.patch("/api/admissions/:id/views", viewLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
-    if (!await storage.getUser(id)) return res.status(404).json({ error: "회원을 찾을 수 없습니다", code: "USER_NOT_FOUND" });
-    await storage.deleteUser(id);
-    auditEvent(req, "user.delete", `user:${id}`);
-    return res.json({ success: true });
+    const views = await storage.incrementAdmissionGuidelineViews(id);
+    if (views === undefined) {
+      return res.status(404).json({ error: "모집요강을 찾을 수 없습니다", code: "ADMISSION_NOT_FOUND" });
+    }
+    return res.json({ success: true, views });
   }));
 
   app.get("/api/notices", asyncHandler(async (req, res) => {
@@ -459,7 +724,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ success: true });
   }));
 
-  app.post("/api/notices/:id/comments", requireAuth, commentLimiter, asyncHandler(async (req, res) => {
+  app.post("/api/notices/:id/comments", adminOnly, commentLimiter, asyncHandler(async (req, res) => {
     const noticeId = parseId(req, res);
     const input = parseBody(commentSchema, req, res);
     if (!noticeId || !input) return;
@@ -475,7 +740,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.status(201).json(publicComment(req, comment));
   }));
 
-  app.patch("/api/notice-comments/:id", requireAuth, asyncHandler(async (req, res) => {
+  app.patch("/api/notice-comments/:id", adminOnly, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(commentSchema, req, res);
     if (!id || !input) return;
@@ -489,7 +754,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(publicComment(req, comment!));
   }));
 
-  app.delete("/api/notice-comments/:id", requireAuth, asyncHandler(async (req, res) => {
+  app.delete("/api/notice-comments/:id", adminOnly, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     const existing = await storage.getNoticeComment(id);
@@ -553,7 +818,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ success: true });
   }));
 
-  app.post("/api/papers/:id/comments", requireAuth, commentLimiter, asyncHandler(async (req, res) => {
+  app.post("/api/papers/:id/comments", adminOnly, commentLimiter, asyncHandler(async (req, res) => {
     const paperId = parseId(req, res);
     const input = parseBody(commentSchema, req, res);
     if (!paperId || !input) return;
@@ -569,7 +834,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.status(201).json(publicComment(req, comment));
   }));
 
-  app.patch("/api/paper-comments/:id", requireAuth, asyncHandler(async (req, res) => {
+  app.patch("/api/paper-comments/:id", adminOnly, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(commentSchema, req, res);
     if (!id || !input) return;
@@ -583,7 +848,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(publicComment(req, comment!));
   }));
 
-  app.delete("/api/paper-comments/:id", requireAuth, asyncHandler(async (req, res) => {
+  app.delete("/api/paper-comments/:id", adminOnly, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     const existing = await storage.getPaperComment(id);
@@ -596,52 +861,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ success: true });
   }));
 
-  app.get("/api/talents", adminOnly, asyncHandler(async (_req, res) => {
-    res.json(await storage.getTalents());
+  app.all("/api/talents", (_req, res) => res.status(410).json({
+    error: "인재풀 등록 기능은 종료되었습니다. 이메일 문의를 이용해주세요",
+    code: "TALENT_API_RETIRED",
   }));
-
-  app.get("/api/talents/:id", adminOnly, asyncHandler(async (req, res) => {
-    const id = parseId(req, res);
-    if (!id) return;
-    const talent = await storage.getTalent(id);
-    if (!talent) return res.status(404).json({ error: "인재풀 정보를 찾을 수 없습니다", code: "TALENT_NOT_FOUND" });
-    return res.json(talent);
-  }));
-
-  app.post("/api/talents", talentLimiter, asyncHandler(async (req, res) => {
-    const input = parseBody(talentCreateSchema, req, res);
-    if (!input) return;
-    const { consent: _consent, ...talentInput } = input;
-    const consentAt = new Date();
-    const retentionUntil = new Date(consentAt);
-    retentionUntil.setUTCFullYear(retentionUntil.getUTCFullYear() + 2);
-    const talent = await storage.createTalent({
-      ...talentInput,
-      ...currentKoreanDateTime(),
-      consentAt,
-      retentionUntil,
-    });
-    auditEvent(req, "talent.create", `talent:${talent.id}`);
-    return res.status(201).json({ success: true, id: talent.id });
-  }));
-
-  app.patch("/api/talents/:id", adminOnly, asyncHandler(async (req, res) => {
-    const id = parseId(req, res);
-    const input = parseBody(talentUpdateSchema, req, res);
-    if (!id || !input) return;
-    const talent = await storage.updateTalent(id, input);
-    if (!talent) return res.status(404).json({ error: "인재풀 정보를 찾을 수 없습니다", code: "TALENT_NOT_FOUND" });
-    auditEvent(req, "talent.update", `talent:${id}`);
-    return res.json(talent);
-  }));
-
-  app.delete("/api/talents/:id", adminOnly, asyncHandler(async (req, res) => {
-    const id = parseId(req, res);
-    if (!id) return;
-    if (!await storage.getTalent(id)) return res.status(404).json({ error: "인재풀 정보를 찾을 수 없습니다", code: "TALENT_NOT_FOUND" });
-    await storage.deleteTalent(id);
-    auditEvent(req, "talent.delete", `talent:${id}`);
-    return res.json({ success: true });
+  app.all("/api/talents/:id", (_req, res) => res.status(410).json({
+    error: "인재풀 등록 기능은 종료되었습니다",
+    code: "TALENT_API_RETIRED",
   }));
 
   return httpServer;

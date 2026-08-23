@@ -7,6 +7,7 @@ import {
   BrainCircuit,
   CalendarDays,
   ChevronRight,
+  ClipboardList,
   Database,
   ExternalLink,
   GraduationCap,
@@ -14,7 +15,6 @@ import {
   Megaphone,
   Network,
   Scale,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -31,7 +31,7 @@ const resources = [
     label: "공유 자료",
     external: true,
   },
-  { title: "개인정보처리방침", href: "/privacy", label: "이용 안내" },
+  { title: "대학원 입학 모집요강", href: "/admissions/guidelines", label: "입학안내" },
 ];
 
 const quickLinks = [
@@ -39,7 +39,7 @@ const quickLinks = [
   { icon: Megaphone, title: "공지사항", href: "/notices" },
   { icon: BookOpen, title: "논문", href: "/papers" },
   { icon: Scale, title: "학과 내규", href: "/regulations" },
-  { icon: Users, title: "인재풀", href: "/talent-pool" },
+  { icon: ClipboardList, title: "입학안내", href: "/admissions/guidelines" },
   {
     icon: LibraryBig,
     title: "자료실",
@@ -111,7 +111,6 @@ const previewNotices: Notice[] = [
 
 export default function Home() {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>(previewNotices);
 
   useEffect(() => {
@@ -121,7 +120,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} />
 
       <main>
         <section className="relative isolate min-h-[440px] overflow-hidden lg:min-h-[460px]" aria-labelledby="hero-title">
@@ -158,8 +157,8 @@ export default function Home() {
                     학과 소개 보기 <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="h-13 rounded-md border-white/70 bg-white/10 px-7 text-base font-bold text-white backdrop-blur-sm hover:bg-white hover:text-slate-900" data-testid="button-talent-pool">
-                  <Link href="/talent-pool">인재풀 등록</Link>
+                <Button asChild size="lg" variant="outline" className="h-13 rounded-md border-white/70 bg-white/10 px-7 text-base font-bold text-white backdrop-blur-sm hover:bg-white hover:text-slate-900" data-testid="button-admissions">
+                  <Link href="/admissions/guidelines">모집요강 보기</Link>
                 </Button>
               </div>
             </motion.div>
@@ -281,10 +280,10 @@ export default function Home() {
               <div>
                 <p className="text-sm font-bold text-blue-100">DANKOOK GRADUATE SCHOOL</p>
                 <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] sm:text-3xl">데이터 전문가의 다음 도전을 시작하세요</h2>
-                <p className="mt-3 text-base text-blue-100">교육과정과 연구 분야를 확인하고 학과 인재풀에 등록할 수 있습니다.</p>
+                <p className="mt-3 text-base text-blue-100">교육과정과 연구 분야를 살펴보고 대학원 모집요강을 확인하세요.</p>
               </div>
               <Button asChild size="lg" className="h-12 shrink-0 rounded-md bg-white px-7 font-bold text-[#1746b8] hover:bg-blue-50">
-                <Link href="/talent-pool">인재풀 등록 <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/admissions/guidelines">모집요강 확인 <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
           </div>
@@ -293,7 +292,6 @@ export default function Home() {
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
-      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }

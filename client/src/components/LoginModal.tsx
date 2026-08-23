@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import { LogIn, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -17,228 +16,119 @@ import { notifyAuthChanged } from "@/hooks/use-session";
 interface LoginModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultTab?: "login" | "signup";
 }
 
-export default function LoginModal({ open, onOpenChange, defaultTab = "login" }: LoginModalProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
+export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [signupData, setSignupData] = useState({ username: "", password: "", confirmPassword: "", name: "", email: "" });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setActiveTab(defaultTab);
-  }, [defaultTab]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setLoginData({ username: "", password: "" });
+      setError("");
+      setShowPassword(false);
+    }
+    onOpenChange(nextOpen);
+  };
 
   const handleLogin = async () => {
     setError("");
-    if (!loginData.username || !loginData.password) {
+    if (!loginData.username.trim() || !loginData.password) {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-    setLoading(true);
-    try {
-      const user = await api.users.login(loginData.username, loginData.password);
-      notifyAuthChanged();
-      setSuccess(`${user.name}님, 환영합니다!`);
-      setTimeout(() => {
-        onOpenChange(false);
-        setLoginData({ username: "", password: "" });
-        setSuccess("");
-      }, 1500);
-    } catch (err: any) {
-      if (err.message?.includes("비밀번호 재설정")) {
-        setError("기존 계정은 보안상 비밀번호 재설정이 필요합니다. 관리자에게 문의해주세요.");
-      } else if (err.message?.includes("아이디 또는 비밀번호")) {
-        setError("아이디 또는 비밀번호가 올바르지 않습니다.");
-      } else {
-        setError("로그인 중 오류가 발생했습니다.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSignup = async () => {
-    setError("");
-    if (!signupData.username || !signupData.password || !signupData.name || !signupData.email) {
-      setError("모든 필수 항목을 입력해주세요.");
-      return;
-    }
-    if (signupData.password !== signupData.confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-    if (signupData.password.length < 10) {
-      setError("비밀번호는 10자 이상이어야 합니다.");
-      return;
-    }
-    
     setLoading(true);
     try {
-      await api.users.create({
-        username: signupData.username,
-        password: signupData.password,
-        name: signupData.name,
-        email: signupData.email,
-      });
-      
-      setSuccess("회원가입이 완료되었습니다! 로그인해주세요.");
-      setTimeout(() => {
-        setActiveTab("login");
-        setSignupData({ username: "", password: "", confirmPassword: "", name: "", email: "" });
-        setSuccess("");
-      }, 1500);
-    } catch (err: any) {
-      if (err.message.includes("이미 사용 중")) {
-        setError("이미 사용 중인 아이디입니다.");
-      } else {
-        setError("회원가입 중 오류가 발생했습니다.");
+      const user = await api.users.login(loginData.username.trim(), loginData.password);
+      if (user.role !== "ADMIN") {
+        await api.logout();
+        setError("관리자 권한이 있는 계정만 로그인할 수 있습니다.");
+        return;
       }
+      notifyAuthChanged();
+      setLoginData({ username: "", password: "" });
+      setShowPassword(false);
+      onOpenChange(false);
+    } catch {
+      setError("아이디 또는 비밀번호를 확인해주세요.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="rounded-xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            회원 서비스
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+            <LockKeyhole className="h-5 w-5 text-[#2156D9]" aria-hidden="true" />
+            관리자 로그인
           </DialogTitle>
           <DialogDescription className="text-base">
-            로그인 또는 회원가입을 진행해주세요.
+            홈페이지 콘텐츠 관리 권한이 있는 계정으로 로그인하세요.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "login" | "signup"); setError(""); setSuccess(""); }} className="w-full mt-4">
-          <TabsList className="grid w-full grid-cols-2 h-12 rounded-lg">
-            <TabsTrigger value="login" className="rounded-lg font-bold text-base">
-              <LogIn className="w-4 h-4 mr-2" />
-              로그인
-            </TabsTrigger>
-            <TabsTrigger value="signup" className="rounded-lg font-bold text-base">
-              <UserPlus className="w-4 h-4 mr-2" />
-              회원가입
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="login" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label className="font-bold">아이디</Label>
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleLogin();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="admin-username" className="font-bold">아이디</Label>
+            <Input
+              id="admin-username"
+              autoComplete="username"
+              placeholder="관리자 아이디"
+              value={loginData.username}
+              onChange={(event) => setLoginData({ ...loginData, username: event.target.value })}
+              className="h-11 rounded-lg text-base"
+              data-testid="input-login-username"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admin-password" className="font-bold">비밀번호</Label>
+            <div className="relative">
               <Input
-                placeholder="아이디를 입력하세요"
-                value={loginData.username}
-                onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-login-username"
+                id="admin-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="비밀번호"
+                value={loginData.password}
+                onChange={(event) => setLoginData({ ...loginData, password: event.target.value })}
+                className="h-11 rounded-lg pr-11 text-base"
+                data-testid="input-login-password"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label className="font-bold">비밀번호</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="비밀번호를 입력하세요"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  className="h-11 rounded-lg pr-10 text-base"
-                  data-testid="input-login-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {success && <p className="text-sm text-green-600">{success}</p>}
-            <Button 
-              onClick={handleLogin} 
-              disabled={loading}
-              className="w-full rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
-              data-testid="button-login-submit"
-            >
-              {loading ? "처리중..." : "로그인"}
-            </Button>
-          </TabsContent>
-
-          <TabsContent value="signup" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label className="font-bold">이름 *</Label>
-              <Input
-                placeholder="이름을 입력하세요"
-                value={signupData.name}
-                onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-signup-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold">이메일 *</Label>
-              <Input
-                type="email"
-                placeholder="이메일을 입력하세요"
-                value={signupData.email}
-                onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-signup-email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold">아이디 *</Label>
-              <Input
-                placeholder="사용할 아이디를 입력하세요"
-                value={signupData.username}
-                onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-signup-username"
-              />
-            </div>
-            <div className="space-y-2">
-                <Label className="font-bold">비밀번호 * (10자 이상)</Label>
-              <Input
-                type="password"
-                placeholder="비밀번호를 입력하세요"
-                value={signupData.password}
-                onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-signup-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold">비밀번호 확인 *</Label>
-              <Input
-                type="password"
-                placeholder="비밀번호를 다시 입력하세요"
-                value={signupData.confirmPassword}
-                onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                className="h-11 rounded-lg text-base"
-                data-testid="input-signup-confirm"
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {success && <p className="text-sm text-green-600">{success}</p>}
-            <Button 
-              onClick={handleSignup}
-              disabled={loading}
-              className="w-full rounded-lg h-12 font-bold bg-gradient-to-r from-primary to-blue-600 text-base"
-              data-testid="button-signup-submit"
-            >
-              {loading ? "처리중..." : "회원가입"}
-            </Button>
-          </TabsContent>
-        </Tabs>
+          </div>
+          {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-12 w-full rounded-lg bg-[#2156D9] text-base font-bold hover:bg-[#1848bc]"
+            data-testid="button-login-submit"
+          >
+            {loading ? "확인 중..." : "로그인"}
+          </Button>
+          <p className="text-center text-xs leading-relaxed text-slate-500">
+            일반 방문자 정보는 수집하지 않으며, 회원가입 기능을 제공하지 않습니다.
+          </p>
+        </form>
       </DialogContent>
     </Dialog>
   );

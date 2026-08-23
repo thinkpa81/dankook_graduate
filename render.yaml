@@ -18,7 +18,3 @@ services:
         generateValue: true
       - key: PUBLIC_ORIGIN
         value: https://dankook-graduate.onrender.com
-      - key: ADMIN_USERNAME
-        sync: false
-      - key: ADMIN_PASSWORD_HASH
-        sync: false

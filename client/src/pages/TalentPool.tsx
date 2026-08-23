@@ -36,7 +36,6 @@ import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/hooks/use-session";
 
 export default function TalentPool() {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [talentData, setTalentData] = useState<Talent[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
@@ -209,7 +208,7 @@ export default function TalentPool() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} />
 
       <PageHero
         eyebrow="TALENT POOL"
@@ -399,7 +398,6 @@ export default function TalentPool() {
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
-      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }

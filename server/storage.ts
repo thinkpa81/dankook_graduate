@@ -1,6 +1,7 @@
 import { 
-  users, notices, papers, talents, noticeComments, paperComments,
+  users, notices, papers, talents, noticeComments, paperComments, admissionGuidelines,
   type User, type InsertUser,
+  type AdmissionGuideline, type InsertAdmissionGuideline,
   type Notice, type InsertNotice,
   type Paper, type InsertPaper,
   type Talent, type InsertTalent,
@@ -8,14 +9,49 @@ import {
   type PaperComment, type InsertPaperComment
 } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
+import { isPasswordHash } from "./security";
+
+export type CreateAdminInput = {
+  username: string;
+  password: string;
+  name: string;
+  registeredAt: string;
+  registeredTime: string;
+};
+
+export type DeleteAdminResult = "deleted" | "not_found" | "last_admin";
+export type AdminSummary = Pick<User,
+  "id" | "username" | "name" | "role" | "status" | "passwordResetRequired" | "registeredAt" | "registeredTime"
+>;
+export type FirstAdminResult =
+  | { status: "created"; admin: User }
+  | { status: "already_exists" };
+
+function isUsableAdmin(user: User): boolean {
+  return user.role.toLowerCase() === "admin"
+    && user.status === "active"
+    && !user.passwordResetRequired
+    && isPasswordHash(user.password);
+}
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUsers(): Promise<User[]>;
+  getAdmins(): Promise<AdminSummary[]>;
   createUser(user: InsertUser): Promise<User>;
+  createAdmin(user: CreateAdminInput): Promise<User>;
+  createFirstAdminSafely(user: CreateAdminInput): Promise<FirstAdminResult>;
+  getActiveAdminCount(): Promise<number>;
+  deleteAdminSafely(id: number, allowLastDatabaseAdmin: boolean): Promise<DeleteAdminResult>;
   updateUserPassword(id: number, password: string): Promise<void>;
   deleteUser(id: number): Promise<void>;
+
+  getAdmissionGuidelines(): Promise<AdmissionGuideline[]>;
+  getAdmissionGuideline(id: number): Promise<AdmissionGuideline | undefined>;
+  createAdmissionGuideline(guideline: InsertAdmissionGuideline): Promise<AdmissionGuideline>;
+  updateAdmissionGuideline(id: number, guideline: Partial<InsertAdmissionGuideline>): Promise<AdmissionGuideline | undefined>;
+  deleteAdmissionGuideline(id: number): Promise<void>;
+  incrementAdmissionGuidelineViews(id: number): Promise<number | undefined>;
 
   getNotices(): Promise<Notice[]>;
   getNotice(id: number): Promise<Notice | undefined>;
@@ -203,7 +239,8 @@ export class MemoryStorage implements IStorage {
   private talents: Talent[] = [];
   private noticeComments: NoticeComment[] = [];
   private paperComments: PaperComment[] = [];
-  private nextId = { users: 1, notices: 5, papers: 7, talents: 1, noticeComments: 1, paperComments: 1 };
+  private admissionGuidelines: AdmissionGuideline[] = [];
+  private nextId = { users: 1, notices: 5, papers: 7, talents: 1, noticeComments: 1, paperComments: 1, admissionGuidelines: 1 };
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.find(u => u.id === id);
@@ -211,29 +248,109 @@ export class MemoryStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return this.users.find(u => u.username === username);
   }
-  async getUsers(): Promise<User[]> {
-    return [...this.users].reverse();
+  async getAdmins(): Promise<AdminSummary[]> {
+    return [...this.users]
+      .filter(user => user.role.toLowerCase() === "admin")
+      .reverse()
+      .map(({ id, username, name, role, status, passwordResetRequired, registeredAt, registeredTime }) => ({
+        id, username, name, role, status, passwordResetRequired, registeredAt, registeredTime,
+      }));
   }
   async createUser(user: InsertUser): Promise<User> {
     const newUser: User = {
       ...user,
       id: this.nextId.users++,
+      email: user.email ?? null,
       role: "user",
       status: "active",
       passwordResetRequired: false,
+      authVersion: 1,
     };
     this.users.push(newUser);
     return newUser;
+  }
+  async createAdmin(user: CreateAdminInput): Promise<User> {
+    const admin: User = {
+      ...user,
+      id: this.nextId.users++,
+      email: null,
+      role: "admin",
+      status: "active",
+      passwordResetRequired: false,
+      authVersion: 1,
+    };
+    this.users.push(admin);
+    return admin;
+  }
+  async createFirstAdminSafely(user: CreateAdminInput): Promise<FirstAdminResult> {
+    if (this.users.some(isUsableAdmin)) return { status: "already_exists" };
+    const existing = this.users.find(candidate => candidate.username === user.username);
+    if (existing) {
+      Object.assign(existing, user, {
+        email: null,
+        role: "admin",
+        status: "active",
+        passwordResetRequired: false,
+        authVersion: existing.authVersion + 1,
+      });
+      return { status: "created", admin: existing };
+    }
+    return { status: "created", admin: await this.createAdmin(user) };
+  }
+  async getActiveAdminCount(): Promise<number> {
+    return this.users.filter(isUsableAdmin).length;
+  }
+  async deleteAdminSafely(id: number, allowLastDatabaseAdmin: boolean): Promise<DeleteAdminResult> {
+    const admin = this.users.find(user => user.id === id && user.role.toLowerCase() === "admin");
+    if (!admin) return "not_found";
+    if (isUsableAdmin(admin) && !allowLastDatabaseAdmin && await this.getActiveAdminCount() <= 1) {
+      return "last_admin";
+    }
+    this.users = this.users.filter(user => user.id !== id);
+    return "deleted";
   }
   async updateUserPassword(id: number, password: string): Promise<void> {
     const user = this.users.find(u => u.id === id);
     if (user) {
       user.password = password;
       user.passwordResetRequired = false;
+      user.authVersion += 1;
     }
   }
   async deleteUser(id: number): Promise<void> {
     this.users = this.users.filter(u => u.id !== id);
+  }
+
+  async getAdmissionGuidelines(): Promise<AdmissionGuideline[]> {
+    return [...this.admissionGuidelines].reverse();
+  }
+  async getAdmissionGuideline(id: number): Promise<AdmissionGuideline | undefined> {
+    return this.admissionGuidelines.find(guideline => guideline.id === id);
+  }
+  async createAdmissionGuideline(guideline: InsertAdmissionGuideline): Promise<AdmissionGuideline> {
+    const created: AdmissionGuideline = {
+      ...guideline,
+      id: this.nextId.admissionGuidelines++,
+      views: guideline.views ?? 0,
+      attachmentUrl: guideline.attachmentUrl ?? null,
+      attachmentName: guideline.attachmentName ?? null,
+    };
+    this.admissionGuidelines.push(created);
+    return created;
+  }
+  async updateAdmissionGuideline(id: number, guideline: Partial<InsertAdmissionGuideline>): Promise<AdmissionGuideline | undefined> {
+    const existing = this.admissionGuidelines.find(item => item.id === id);
+    if (existing) Object.assign(existing, guideline);
+    return existing;
+  }
+  async deleteAdmissionGuideline(id: number): Promise<void> {
+    this.admissionGuidelines = this.admissionGuidelines.filter(item => item.id !== id);
+  }
+  async incrementAdmissionGuidelineViews(id: number): Promise<number | undefined> {
+    const guideline = this.admissionGuidelines.find(item => item.id === id);
+    if (!guideline) return undefined;
+    guideline.views += 1;
+    return guideline.views;
   }
 
   async getNotices(): Promise<Notice[]> {
@@ -405,8 +522,21 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUsers(): Promise<User[]> {
-    return await this.db.select().from(users).orderBy(desc(users.id));
+  async getAdmins(): Promise<AdminSummary[]> {
+    return await this.db
+      .select({
+        id: users.id,
+        username: users.username,
+        name: users.name,
+        role: users.role,
+        status: users.status,
+        passwordResetRequired: users.passwordResetRequired,
+        registeredAt: users.registeredAt,
+        registeredTime: users.registeredTime,
+      })
+      .from(users)
+      .where(sql`lower(${users.role}) = 'admin'`)
+      .orderBy(desc(users.id));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -414,15 +544,150 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async createAdmin(admin: CreateAdminInput): Promise<User> {
+    const [created] = await this.db.insert(users).values({
+      ...admin,
+      email: null,
+      role: "admin",
+      status: "active",
+      passwordResetRequired: false,
+      authVersion: 1,
+    }).returning();
+    return created;
+  }
+
+  async createFirstAdminSafely(admin: CreateAdminInput): Promise<FirstAdminResult> {
+    return await this.db.transaction(async (transaction: any) => {
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(814207331)`);
+      const candidates = await transaction
+        .select()
+        .from(users)
+        .where(sql`
+          lower(${users.role}) = 'admin'
+          AND ${users.status} = 'active'
+          AND ${users.passwordResetRequired} = false
+        `);
+      if (candidates.some((candidate: User) => isPasswordHash(candidate.password))) {
+        return { status: "already_exists" };
+      }
+
+      const [existing] = await transaction
+        .select()
+        .from(users)
+        .where(eq(users.username, admin.username));
+      if (existing) {
+        const [restored] = await transaction
+          .update(users)
+          .set({
+            password: admin.password,
+            name: admin.name,
+            email: null,
+            role: "admin",
+            status: "active",
+            passwordResetRequired: false,
+            authVersion: sql`${users.authVersion} + 1`,
+            registeredAt: admin.registeredAt,
+            registeredTime: admin.registeredTime,
+          })
+          .where(eq(users.id, existing.id))
+          .returning();
+        return { status: "created", admin: restored };
+      }
+
+      const [created] = await transaction.insert(users).values({
+        ...admin,
+        email: null,
+        role: "admin",
+        status: "active",
+        passwordResetRequired: false,
+        authVersion: 1,
+      }).returning();
+      return { status: "created", admin: created };
+    });
+  }
+
+  async getActiveAdminCount(): Promise<number> {
+    const candidates = await this.db
+      .select()
+      .from(users)
+      .where(sql`
+        lower(${users.role}) = 'admin'
+        AND ${users.status} = 'active'
+        AND ${users.passwordResetRequired} = false
+      `);
+    return candidates.filter((candidate: User) => isPasswordHash(candidate.password)).length;
+  }
+
+  async deleteAdminSafely(id: number, allowLastDatabaseAdmin: boolean): Promise<DeleteAdminResult> {
+    return await this.db.transaction(async (transaction: any) => {
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(814207331)`);
+      const [admin] = await transaction
+        .select()
+        .from(users)
+        .where(sql`${users.id} = ${id} AND lower(${users.role}) = 'admin'`);
+      if (!admin) return "not_found";
+
+      const targetIsUsable = admin.status === "active"
+        && !admin.passwordResetRequired
+        && isPasswordHash(admin.password);
+      if (targetIsUsable && !allowLastDatabaseAdmin) {
+        const candidates = await transaction
+          .select()
+          .from(users)
+          .where(sql`
+            lower(${users.role}) = 'admin'
+            AND ${users.status} = 'active'
+            AND ${users.passwordResetRequired} = false
+          `);
+        if (candidates.filter((candidate: User) => isPasswordHash(candidate.password)).length <= 1) return "last_admin";
+      }
+
+      await transaction.delete(users).where(eq(users.id, id));
+      return "deleted";
+    });
+  }
+
   async updateUserPassword(id: number, password: string): Promise<void> {
     await this.db
       .update(users)
-      .set({ password, passwordResetRequired: false })
+      .set({ password, passwordResetRequired: false, authVersion: sql`${users.authVersion} + 1` })
       .where(eq(users.id, id));
   }
 
   async deleteUser(id: number): Promise<void> {
     await this.db.delete(users).where(eq(users.id, id));
+  }
+
+  async getAdmissionGuidelines(): Promise<AdmissionGuideline[]> {
+    return await this.db.select().from(admissionGuidelines).orderBy(desc(admissionGuidelines.date), desc(admissionGuidelines.id));
+  }
+
+  async getAdmissionGuideline(id: number): Promise<AdmissionGuideline | undefined> {
+    const [guideline] = await this.db.select().from(admissionGuidelines).where(eq(admissionGuidelines.id, id));
+    return guideline || undefined;
+  }
+
+  async createAdmissionGuideline(guideline: InsertAdmissionGuideline): Promise<AdmissionGuideline> {
+    const [created] = await this.db.insert(admissionGuidelines).values(guideline).returning();
+    return created;
+  }
+
+  async updateAdmissionGuideline(id: number, guideline: Partial<InsertAdmissionGuideline>): Promise<AdmissionGuideline | undefined> {
+    const [updated] = await this.db.update(admissionGuidelines).set(guideline).where(eq(admissionGuidelines.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteAdmissionGuideline(id: number): Promise<void> {
+    await this.db.delete(admissionGuidelines).where(eq(admissionGuidelines.id, id));
+  }
+
+  async incrementAdmissionGuidelineViews(id: number): Promise<number | undefined> {
+    const [updated] = await this.db
+      .update(admissionGuidelines)
+      .set({ views: sql`${admissionGuidelines.views} + 1` })
+      .where(eq(admissionGuidelines.id, id))
+      .returning({ views: admissionGuidelines.views });
+    return updated?.views;
   }
 
   async getNotices(): Promise<Notice[]> {

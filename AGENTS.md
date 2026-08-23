@@ -16,7 +16,7 @@
 Use `npm run dev` for the isolated Vite UI preview and `npm run dev:server` for the full Express + Vite development server.
 
 ## Security and quality
-- Never commit credentials or production secrets. `SESSION_SECRET` is mandatory in production.
+- Never commit credentials or production secrets. Administrator passwords must only be stored as server-side scrypt hashes.
 - Keep session cookies `httpOnly`, `secure` in production, and `sameSite=lax` or stricter.
 - Use semantic HTML, visible focus states, descriptive image alternative text, and reduced-motion support.
 - External links opened in a new tab must include `rel="noopener noreferrer"`.
@@ -24,5 +24,6 @@ Use `npm run dev` for the isolated Vite UI preview and `npm run dev:server` for 
 
 ## Protected project behavior
 - Existing pages and routes must continue to work after a homepage change.
-- Preserve the notice API, paper categories, regulations content, talent-pool submission, login, and signup behavior.
+- Preserve the notice API, paper categories, regulations content, admissions list, administrator login, and administrator-management behavior.
+- Public signup, public talent-pool submission, and public personal-data forms are intentionally retired and must not be restored without an explicit requirement.
 - Avoid destructive Git operations and keep unrelated user changes intact.

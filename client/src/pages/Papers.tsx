@@ -59,7 +59,6 @@ export default function Papers() {
   const category = normalizeCategory(params.category);
 
   const [loginOpen, setLoginOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -275,7 +274,7 @@ export default function Papers() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} onSignupClick={() => setSignupOpen(true)} />
+      <Header onLoginClick={() => setLoginOpen(true)} />
 
       <PageHero
         eyebrow="PAPERS"
@@ -342,7 +341,7 @@ export default function Papers() {
                           <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
-                      {isAdmin && <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(paper)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)}><Trash2 className="w-4 h-4" /></Button></div>}
+                      {isAdmin && <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>}
                     </div>
                   </CardContent>
                 </Card>
@@ -480,7 +479,6 @@ export default function Papers() {
 
       <Footer />
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
-      <LoginModal open={signupOpen} onOpenChange={setSignupOpen} defaultTab="signup" />
     </div>
   );
 }

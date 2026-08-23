@@ -1,6 +1,8 @@
-# Design QA — 단국대학교 대학원 홈페이지 누적 검증
+# Design QA — 입학안내·박사과정 문의·관리자 개편
 
 - Reference sources:
+  - 학과 소개 박사과정 사전 컨택 교체 지시: `/workspace/scratch/8305753068ce/upload/e88f4cd3-31f2-426f-9e65-0bf0b7e4f46b.png`
+  - 입학안내 모집요강 목록 참고 화면: `/workspace/scratch/8305753068ce/upload/55d2d4dd-ed2e-40e9-b013-cc286fce9a6c.png`
   - 논문 목록 조회수 화면: `/workspace/scratch/8305753068ce/upload/7f9600d5-d682-4bec-9b4d-c76f479c4c91.png`
   - 헤더 AIMS Lab 위치: `/workspace/scratch/8305753068ce/upload/b4620ec0-472f-477d-8d9a-2c3dfef2b2f0.png`
   - 지도교수 연구관심분야 기존 3열 화면: `/workspace/scratch/8305753068ce/upload/c52a6034-bf57-496d-9cb8-bc18ae87745e.png`
@@ -8,12 +10,18 @@
   - 브라우저 탭 변경 전 화면: `/workspace/scratch/8305753068ce/upload/a8f3bff6-ecf4-4f7c-8986-99fed93e6230.png` (343 × 49px)
   - 메인 히어로 영문 표기: `/workspace/scratch/8305753068ce/upload/99cb2c6d-2715-4026-9776-7a71b87156cf.png`
   - 변경 전 운영 학과 내규: `https://dankook-graduate.onrender.com/regulations`
-- Implementation: `/`, `/about`, `/regulations`, `/notices`, `/papers/conference`, `/papers/journal`
+- Implementation: `/about`, `/admissions/guidelines`, `/admin`
 - Browser viewport: 1363 × 936 CSS pixels
 - Primary state: 로그아웃 상태
-- Latest implementation screenshot: `/workspace/scratch/8305753068ce/work/design_qa/about-interests-implementation.png` (1363 × 936px)
+- Primary implementation: local cloud-browser preview at 1363 × 936 CSS pixels
 
 ## Visual comparison
+
+- 학과 소개 지도교수 카드의 사진·연구관심분야 구성을 유지하면서 오른쪽 정보 영역 하단에 박사과정 사전 컨택 안내를 연속된 문서형 섹션으로 배치했다.
+- 기존 인재풀 입력 폼과 개인정보 동의 체크박스 대신 이메일 문의, 필수 첨부 서류, 행정 문의의 3단계 텍스트 안내만 제공한다.
+- 모집요강 화면은 기준 이미지의 좌측 `입학안내/모집요강` 메뉴, 우측 제목·검색·목록 구조를 단국대학교 청색 토큰으로 재구성했다.
+- 목록 행은 제목, 게시 기관, 날짜, 조회수와 선택적 다운로드 버튼을 일정한 간격으로 제공하며 장식용 이모지는 사용하지 않는다.
+- 관리자 화면은 일반 대학원 행정 화면과 같은 흰색 카드·얇은 경계선·절제된 청색 버튼을 사용하고 비밀번호 원문이나 해시를 표시하지 않는다.
 
 - 메인 히어로의 영문 표기를 `DATA SCIENCE`로 변경하고, 이전 `DATA KNOWLEDGE SERVICE ENGINEERING` 문구가 남지 않았음을 확인했다.
 - 헤더 학과명 바로 아래에 `AIMS Lab(에임즈 랩) : AI, Innovation, Metaverse & Service Lab`이 표시되며 데스크톱 헤더 폭 안에 들어온다.
@@ -29,6 +37,12 @@
 - P2 결함: 없음.
 
 ## Content and interaction checks
+
+- 공개 화면에 인재풀 등록 입력, 개인정보 수집 동의, 공개 회원가입 UI와 개인정보처리방침 링크가 없다.
+- 기존 `/talent-pool` 호환 주소는 새 모집요강 화면으로 연결된다.
+- 모집요강 검색, 상세 열기, 조회수 증가, HTTPS 첨부 링크와 관리자 등록·수정·삭제 동작을 코드와 브라우저에서 확인한다.
+- 최초 관리자가 없을 때 `/admin`은 Render 서버 로그의 15분 유효 일회성 코드 입력 화면만 제공한다.
+- 관리자 생성·비밀번호 변경·삭제는 관리자 세션에서만 가능하고 현재 계정과 마지막 활성 관리자 삭제를 차단한다.
 
 - 메인 화면에서 `DATA SCIENCE`가 두 위치에 표시되고 이전 영문 표기는 0건임을 확인했다.
 - 학과 개요는 `데이터 관리 및 분석 기술과 비즈니스 마인드를 기반으로 사회`와 `전 분야에 융합 적용이 가능한 미래 인재를 양성합니다.`의 정확한 두 줄로 표시된다.
@@ -53,6 +67,4 @@
 - 이미지 품질: 제공된 단국대학교 원본 로고에서 DKU 심볼을 추출해 512px RGBA 파비콘으로 생성했다.
 - 문구: AIMS Lab, 학과 개요 2개 문장, 브라우저 탭 제목을 요청 문구와 일치시켰다.
 
-## Final result
-
-passed
+final result: passed
