@@ -113,6 +113,7 @@ export default function Admissions() {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState<AdmissionGuideline | null>(null);
   const [viewing, setViewing] = useState<AdmissionGuideline | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -234,12 +235,15 @@ export default function Admissions() {
 
   const deleteGuideline = async () => {
     if (deleteId === null) return;
+    setDeleting(true);
     try {
       await api.admissions.delete(deleteId);
       setGuidelines((current) => current.filter((item) => item.id !== deleteId));
       setDeleteId(null);
     } catch (caught) {
       window.alert(caught instanceof Error ? caught.message : "모집요강 삭제에 실패했습니다.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -425,7 +429,7 @@ export default function Admissions() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog open={formOpen} onOpenChange={(open) => { if (!saving) setFormOpen(open); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-xl sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black">모집요강 {editing ? "수정" : "등록"}</DialogTitle>
@@ -468,15 +472,15 @@ export default function Admissions() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>모집요강을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>삭제한 모집요강은 복구할 수 없습니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-md">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void deleteGuideline()} className="rounded-md bg-rose-700 text-white hover:bg-rose-800">삭제</AlertDialogAction>
+            <AlertDialogCancel disabled={deleting} className="h-11 rounded-md">취소</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deleteGuideline(); }} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

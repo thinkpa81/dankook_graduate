@@ -61,6 +61,8 @@ export default function Papers() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -148,6 +150,7 @@ export default function Papers() {
       toast.error("http:// 또는 https://로 시작하는 사이트 주소를 입력해주세요.");
       return;
     }
+    setSaving(true);
     try {
       await api.papers.create({
         category,
@@ -172,6 +175,8 @@ export default function Papers() {
     } catch (e: any) {
       console.error("Failed to add paper", e);
       toast.error(e.message || "논문 등록에 실패했습니다.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -189,6 +194,7 @@ export default function Papers() {
       toast.error("http:// 또는 https://로 시작하는 사이트 주소를 입력해주세요.");
       return;
     }
+    setSaving(true);
     try {
       await api.papers.update(editingPaper.id, {
         title: formData.title.trim(),
@@ -202,18 +208,23 @@ export default function Papers() {
     } catch (e: any) {
       console.error("Failed to edit paper", e);
       toast.error(e.message || "논문 수정에 실패했습니다.");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (deleteId) {
-      try {
-        await api.papers.delete(deleteId);
-        await loadPapers();
-        setDeleteId(null);
-      } catch (e) {
-        console.error("Failed to delete paper", e);
-      }
+    if (deleteId === null) return;
+    setDeleting(true);
+    try {
+      await api.papers.delete(deleteId);
+      await loadPapers();
+      setDeleteId(null);
+    } catch (e) {
+      console.error("Failed to delete paper", e);
+      toast.error(e instanceof Error ? e.message : "논문 삭제에 실패했습니다.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -341,7 +352,7 @@ export default function Papers() {
                           <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
-                      {isAdmin && <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>}
+                      {isAdmin && <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>}
                     </div>
                   </CardContent>
                 </Card>
@@ -430,13 +441,13 @@ export default function Papers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-h-[85vh] rounded-xl sm:max-w-lg" data-testid="paper-add-dialog">
+      <Dialog open={isAddOpen} onOpenChange={(open) => { if (!saving) setIsAddOpen(open); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto rounded-xl sm:max-w-lg" data-testid="paper-add-dialog">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">등록</DialogTitle>
             <DialogDescription className="text-base">{categoryTitles[category]}에 새 논문을 등록합니다.</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 space-y-5">
+          <form className="mt-4 space-y-5" onSubmit={(event) => { event.preventDefault(); void handleAdd(); }}>
             <div className="space-y-2">
               <Label htmlFor="paper-title" className="font-bold">논문 제목</Label>
               <Input id="paper-title" placeholder="논문 제목을 입력하세요" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" autoFocus />
@@ -450,27 +461,27 @@ export default function Papers() {
               <Input id="paper-website" type="url" inputMode="url" placeholder="https://example.com" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
             <div className="flex gap-3 pt-3">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)} className="h-12 flex-1 rounded-lg text-base">취소</Button>
-              <Button onClick={handleAdd} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold" data-testid="paper-submit">등록</Button>
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} disabled={saving} className="h-12 flex-1 rounded-lg text-base">취소</Button>
+              <Button type="submit" disabled={saving} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold" data-testid="paper-submit">{saving ? "등록 중..." : "등록"}</Button>
             </div>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-h-[85vh] rounded-xl sm:max-w-lg">
+      <Dialog open={isEditOpen} onOpenChange={(open) => { if (!saving) setIsEditOpen(open); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto rounded-xl sm:max-w-lg">
           <DialogHeader><DialogTitle className="text-xl font-bold">논문 수정</DialogTitle><DialogDescription>논문 제목, 저자와 사이트 주소를 수정합니다.</DialogDescription></DialogHeader>
-          <div className="mt-4 space-y-5">
+          <form className="mt-4 space-y-5" onSubmit={(event) => { event.preventDefault(); void handleEdit(); }}>
             <div className="space-y-2"><Label htmlFor="edit-paper-title" className="font-bold">논문 제목</Label><Input id="edit-paper-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" /></div>
             <div className="space-y-2"><Label htmlFor="edit-paper-authors" className="font-bold">저자</Label><Input id="edit-paper-authors" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" /></div>
             <div className="space-y-2"><Label htmlFor="edit-paper-website" className="font-bold">사이트 주소</Label><Input id="edit-paper-website" type="url" inputMode="url" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" /></div>
-            <div className="flex gap-3 pt-3"><Button variant="outline" onClick={() => setIsEditOpen(false)} className="h-12 flex-1 rounded-lg text-base">취소</Button><Button onClick={handleEdit} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold">수정</Button></div>
-          </div>
+            <div className="flex gap-3 pt-3"><Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving} className="h-12 flex-1 rounded-lg text-base">취소</Button><Button type="submit" disabled={saving} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold">{saving ? "수정 중..." : "수정"}</Button></div>
+          </form>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>논문을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
+        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>논문을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-lg">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void handleDelete(); }} className="h-11 rounded-lg bg-destructive text-destructive-foreground">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={deleteCommentId !== null} onOpenChange={() => setDeleteCommentId(null)}>

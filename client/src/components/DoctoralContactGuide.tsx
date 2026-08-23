@@ -13,11 +13,10 @@ export default function DoctoralContactGuide() {
       <div className="max-w-4xl">
         <p className="text-sm font-bold tracking-[0.08em] text-[#2156D9]">DOCTORAL PROGRAM CONTACT</p>
         <h3 id="doctoral-contact-heading" className="mt-2 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">
-          단국대 연구실 박사과정 합류 전 사전 컨택 안내
+          박사과정 합류 전 사전 컨택
         </h3>
         <p className="mt-4 max-w-3xl text-[15px] leading-7 text-slate-600 sm:text-base">
-          우리 연구실과 함께할 열정적인 연구원을 모집합니다. 정식 지원에 앞서, 아래의 간단한 양식에 맞춰
-          지도교수님께 이메일로 먼저 문의해 주시기 바랍니다.
+          지원에 앞서 아래의 간단한 양식에 맞춰 지도교수님께 이메일로 먼저 문의해 주시기 바랍니다.
         </p>
 
         <ol className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
@@ -29,14 +28,7 @@ export default function DoctoralContactGuide() {
             <div className="min-w-0 space-y-4 text-[15px] leading-7 text-slate-700">
               <p className="[overflow-wrap:anywhere]">
                 <span className="mr-3 font-bold text-slate-900">수신:</span>{" "}
-                서응교 교수 (
-                <a
-                  href={`mailto:${professorEmail}?subject=${inquirySubject}`}
-                  className="font-semibold text-[#2156D9] underline-offset-4 [overflow-wrap:anywhere] hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2156D9]"
-                >
-                  {professorEmail}
-                </a>
-                )
+                서응교 교수
               </p>
               <div className="min-w-0 rounded-md border border-blue-100 bg-blue-50/70 px-4 py-3 [overflow-wrap:anywhere]">
                 <p>

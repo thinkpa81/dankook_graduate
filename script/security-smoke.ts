@@ -210,4 +210,42 @@ assert.deepEqual(
   [sameDateGuideline.id, newestGuideline.id, guideline.id, olderGuideline.id],
 );
 
+const updatedGuideline = await storage.updateAdmissionGuideline(guideline.id, { title: "Updated graduate admission guide" });
+assert.equal(updatedGuideline?.title, "Updated graduate admission guide");
+await storage.deleteAdmissionGuideline(olderGuideline.id);
+assert.equal(await storage.getAdmissionGuideline(olderGuideline.id), undefined);
+
+const notice = await storage.createNotice({
+  title: "Operations notice",
+  content: "Administrator-managed notice content",
+  date: "2026.08.24",
+  views: 0,
+  isImportant: false,
+  files: [],
+});
+assert.equal((await storage.updateNotice(notice.id, { title: "Updated operations notice" }))?.title, "Updated operations notice");
+await storage.deleteNotice(notice.id);
+assert.equal(await storage.getNotice(notice.id), undefined);
+
+const paper = await storage.createPaper({
+  category: "journal",
+  title: "Operations paper",
+  authors: "Dankook Graduate School",
+  firstAuthor: null,
+  correspondingAuthor: null,
+  venue: null,
+  journal: null,
+  volume: null,
+  year: "2026",
+  abstract: null,
+  keywords: [],
+  files: [],
+  websiteUrl: "https://example.edu/paper",
+  date: "2026.08.24",
+  views: 0,
+});
+assert.equal((await storage.updatePaper(paper.id, { title: "Updated operations paper" }))?.title, "Updated operations paper");
+await storage.deletePaper(paper.id);
+assert.equal(await storage.getPaper(paper.id), undefined);
+
 console.log("Security smoke checks passed");
