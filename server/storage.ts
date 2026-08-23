@@ -322,7 +322,8 @@ export class MemoryStorage implements IStorage {
   }
 
   async getAdmissionGuidelines(): Promise<AdmissionGuideline[]> {
-    return [...this.admissionGuidelines].reverse();
+    return [...this.admissionGuidelines]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   }
   async getAdmissionGuideline(id: number): Promise<AdmissionGuideline | undefined> {
     return this.admissionGuidelines.find(guideline => guideline.id === id);
