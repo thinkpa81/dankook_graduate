@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CalendarDays, Download, ExternalLink, Eye, FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -35,6 +35,15 @@ type GuidelineForm = {
   date: string;
   attachmentUrl: string;
   attachmentName: string;
+};
+
+type SearchScope = "all" | "title" | "content" | "organization";
+
+const searchScopeLabels: Record<SearchScope, string> = {
+  all: "전체",
+  title: "제목",
+  content: "내용",
+  organization: "게시기관",
 };
 
 const currentKoreanIsoDate = () => {
@@ -97,7 +106,9 @@ export default function Admissions() {
   const [guidelines, setGuidelines] = useState<AdmissionGuideline[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchScope, setSearchScope] = useState<SearchScope>("all");
   const [form, setForm] = useState<GuidelineForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -131,11 +142,21 @@ export default function Admissions() {
 
   const filteredGuidelines = useMemo(() => {
     const keyword = searchQuery.trim().toLocaleLowerCase("ko-KR");
-    if (!keyword) return guidelines;
-    return guidelines.filter((item) =>
-      [item.title, item.content, item.organization].some((value) => value.toLocaleLowerCase("ko-KR").includes(keyword)),
-    );
-  }, [guidelines, searchQuery]);
+    return [...guidelines]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+      .filter((item) => {
+        if (!keyword) return true;
+        const values = searchScope === "all"
+          ? [item.title, item.content, item.organization]
+          : [item[searchScope]];
+        return values.some((value) => value.toLocaleLowerCase("ko-KR").includes(keyword));
+      });
+  }, [guidelines, searchQuery, searchScope]);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSearchQuery(searchInput.trim());
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -223,7 +244,7 @@ export default function Admissions() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-slate-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
       <PageHero
@@ -236,7 +257,7 @@ export default function Admissions() {
       />
 
       <main className="flex-1 py-10 lg:py-14">
-        <div className="container mx-auto grid gap-8 px-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-12">
+        <div className="container mx-auto grid max-w-[1200px] gap-8 px-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-12">
           <aside aria-label="입학안내 메뉴">
             <div className="border-t-2 border-slate-900 bg-white lg:sticky lg:top-32">
               <h2 className="border-b border-slate-200 px-5 py-5 text-xl font-black text-slate-950">입학안내</h2>
@@ -264,27 +285,57 @@ export default function Admissions() {
             </div>
 
             <div className="my-6 flex justify-end">
-              <div className="flex w-full max-w-lg overflow-hidden rounded-md border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-[#2156D9]/30">
-                <span className="flex items-center border-r border-slate-200 px-4 text-sm font-semibold text-slate-600">전체</span>
-                <label htmlFor="admissions-search" className="sr-only">모집요강 검색</label>
+              <form
+                role="search"
+                aria-label="모집요강 검색"
+                className="flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-[#2156D9]/30 sm:flex-row"
+                onSubmit={submitSearch}
+              >
+                <label htmlFor="admissions-search-scope" className="sr-only">검색 범위</label>
+                <select
+                  id="admissions-search-scope"
+                  value={searchScope}
+                  onChange={(event) => setSearchScope(event.target.value as SearchScope)}
+                  className="h-12 w-full border-b border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2156D9] sm:w-36 sm:border-r sm:border-b-0"
+                  data-testid="select-admissions-search-scope"
+                >
+                  {Object.entries(searchScopeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <label htmlFor="admissions-search" className="sr-only">검색어</label>
                 <Input
                   id="admissions-search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  type="search"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="검색어를 입력해 주세요"
-                  className="h-12 min-w-0 flex-1 rounded-none border-0 bg-transparent px-4 shadow-none focus-visible:ring-0"
+                  className="h-12 min-w-0 flex-1 rounded-none border-0 bg-transparent px-4 shadow-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2156D9]"
                   data-testid="input-admissions-search"
                 />
-                <span className="flex w-12 shrink-0 items-center justify-center bg-slate-800 text-white" aria-hidden="true">
-                  <Search className="h-5 w-5" />
-                </span>
-              </div>
+                <Button
+                  type="submit"
+                  className="h-12 w-full shrink-0 rounded-none bg-slate-800 text-white hover:bg-slate-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:w-12"
+                  aria-label="모집요강 검색"
+                  data-testid="button-admissions-search"
+                >
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                  <span className="sm:sr-only">검색</span>
+                </Button>
+              </form>
             </div>
 
             <div className="bg-white">
-              {loading && <p className="border-b border-slate-200 px-5 py-14 text-center text-slate-500">모집요강을 불러오는 중입니다.</p>}
+              <p className="sr-only" role="status" aria-live="polite">
+                {!loading && !error
+                  ? searchQuery
+                    ? `${searchScopeLabels[searchScope]} 범위에서 ${filteredGuidelines.length}개의 검색 결과가 있습니다.`
+                    : `모집요강 ${filteredGuidelines.length}건이 있습니다.`
+                  : ""}
+              </p>
+              {loading && <p role="status" className="border-b border-slate-200 px-5 py-14 text-center text-slate-500">모집요강을 불러오는 중입니다.</p>}
               {!loading && error && (
-                <div className="border-b border-slate-200 px-5 py-14 text-center">
+                <div role="alert" className="border-b border-slate-200 px-5 py-14 text-center">
                   <p className="font-semibold text-rose-700">모집요강을 불러오지 못했습니다.</p>
                   <p className="mt-1 text-sm text-slate-500">{error}</p>
                 </div>
@@ -306,18 +357,15 @@ export default function Admissions() {
                   className="group grid gap-4 border-b border-slate-200 px-4 py-6 transition-colors hover:bg-blue-50/40 sm:px-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
                 >
                   <div className="min-w-0">
-                    <h3 className="text-lg font-extrabold leading-7 tracking-[-0.02em] text-slate-950 transition-colors group-hover:text-[#2156D9] sm:text-xl">
-                      <button type="button" className="text-left focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2156D9]" onClick={() => void openDetail(item)} data-testid={`admission-title-${item.id}`}>
+                    <h3 className="text-lg font-extrabold leading-7 tracking-[-0.02em] text-slate-950 [overflow-wrap:anywhere] transition-colors group-hover:text-[#2156D9] sm:text-xl">
+                      <button type="button" className="max-w-full text-left [overflow-wrap:anywhere] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2156D9]" onClick={() => void openDetail(item)} data-testid={`admission-title-${item.id}`}>
                         {item.title}
                       </button>
                     </h3>
                     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-                      <span>No.{item.id}</span>
-                      <span aria-hidden="true">|</span>
-                      <span>{item.organization}</span>
-                      <span aria-hidden="true">|</span>
-                      <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{item.date}</span>
-                      <span aria-hidden="true">|</span>
+                      <span className="inline-flex items-center gap-3"><span>No.{item.id}</span><span aria-hidden="true">|</span></span>
+                      <span className="inline-flex min-w-0 items-center gap-3"><span className="[overflow-wrap:anywhere]">{item.organization}</span><span aria-hidden="true">|</span></span>
+                      <span className="inline-flex items-center gap-3"><span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{item.date}</span><span aria-hidden="true">|</span></span>
                       <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" aria-hidden="true" />조회수 {item.views}</span>
                     </div>
                   </div>
@@ -356,20 +404,20 @@ export default function Admissions() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto rounded-xl sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="pr-8 text-xl font-black leading-8">{viewing?.title}</DialogTitle>
+            <DialogTitle className="pr-8 text-xl font-black leading-8 [overflow-wrap:anywhere]">{viewing?.title}</DialogTitle>
             <DialogDescription className="flex flex-wrap gap-x-3 gap-y-1 pt-2 text-sm">
-              <span>{viewing?.organization}</span>
+              <span className="[overflow-wrap:anywhere]">{viewing?.organization}</span>
               <span>{viewing?.date}</span>
               <span>조회수 {viewing?.views}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-3 whitespace-pre-wrap border-y border-slate-200 py-6 text-[15px] leading-7 text-slate-700">
+          <div className="mt-3 whitespace-pre-wrap border-y border-slate-200 py-6 text-[15px] leading-7 text-slate-700 [overflow-wrap:anywhere]">
             {viewing?.content}
           </div>
           {viewing?.attachmentUrl && (
-            <Button asChild className="mt-2 h-11 rounded-md bg-[#2156D9] font-bold hover:bg-[#1848bc]">
+            <Button asChild className="mt-2 h-auto min-h-11 max-w-full whitespace-normal break-words rounded-md bg-[#2156D9] py-2 font-bold hover:bg-[#1848bc]">
               <a href={viewing.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                <Download className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
                 {viewing.attachmentName || "첨부자료 열기"}
               </a>
             </Button>
@@ -383,7 +431,7 @@ export default function Admissions() {
             <DialogTitle className="text-xl font-black">모집요강 {editing ? "수정" : "등록"}</DialogTitle>
             <DialogDescription>지원자가 확인할 모집요강 정보를 입력합니다.</DialogDescription>
           </DialogHeader>
-          <div className="mt-3 space-y-5">
+          <form className="mt-3 space-y-5" onSubmit={(event) => { event.preventDefault(); void saveGuideline(); }}>
             <div className="space-y-2">
               <Label htmlFor="guideline-title" className="font-bold">제목</Label>
               <Input id="guideline-title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="h-11 rounded-md" />
@@ -412,11 +460,11 @@ export default function Admissions() {
             </div>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="h-11 flex-1 rounded-md">취소</Button>
-              <Button type="button" onClick={() => void saveGuideline()} disabled={saving} className="h-11 flex-1 rounded-md bg-[#2156D9] font-bold hover:bg-[#1848bc]">
+              <Button type="submit" disabled={saving} className="h-11 flex-1 rounded-md bg-[#2156D9] font-bold hover:bg-[#1848bc]">
                 {saving ? "저장 중..." : editing ? "수정" : "등록"}
               </Button>
             </div>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
 

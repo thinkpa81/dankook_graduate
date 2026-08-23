@@ -1,5 +1,7 @@
 # Cloudflare Pages 배포 가이드
 
+> **폐기된 대체 플랫폼 문서:** 현재 운영 대상은 Render입니다. 아래 토큰·환경변수·배포 명령을 실행하거나 예시값을 실제 비밀로 재사용하지 말고, `RENDER_DEPLOY.md`, `render.yaml`, `docs/SECURITY_OPERATIONS.md`를 따르십시오.
+
 ## 🚀 배포 URL
 https://dankook-graduate.pages.dev
 
@@ -37,7 +39,7 @@ CLOUDFLARE_API_TOKEN = (1단계에서 생성한 API 토큰)
 CLOUDFLARE_ACCOUNT_ID = (1단계에서 확인한 Account ID)
 DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 NEON_DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
-SESSION_SECRET = your-secure-random-secret-key-here
+SESSION_SECRET = (배포 플랫폼의 Secret에서 생성·관리하고 문서나 명령행에 값을 기록하지 않음)
 ```
 
 #### 3단계: 첫 배포 실행
@@ -91,9 +93,9 @@ DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자
 
 NEON_DATABASE_URL = <배포 플랫폼에 비밀 변수로 저장한 새 연결 문자열>
 
-SESSION_SECRET = your-secure-random-secret-key-here
+SESSION_SECRET = (배포 플랫폼의 Secret에서 생성·관리하고 문서나 명령행에 값을 기록하지 않음)
 
-NODE_VERSION = 20
+NODE_VERSION = 24
 ```
 
 #### 4단계: 배포 시작

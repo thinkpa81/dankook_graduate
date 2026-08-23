@@ -31,7 +31,7 @@ const navItems = [
   { title: "학과 내규", href: "/regulations" },
   {
     title: "입학안내",
-    href: "/admissions",
+    href: "/admissions/guidelines",
     children: [
       { title: "모집요강", href: "/admissions/guidelines" },
     ],
@@ -88,7 +88,9 @@ export default function Header({ onLoginClick }: HeaderProps) {
 
         <nav className="hidden items-stretch self-stretch xl:flex" aria-label="주요 메뉴">
           {navItems.map((item) => {
-            const active = item.children ? location.startsWith(item.href) : location === item.href;
+            const active = item.children
+              ? location === item.href || item.children.some((child) => location === child.href)
+              : location === item.href;
             const baseClass = `relative flex h-full items-center border-b-[3px] px-4 pt-[3px] text-[15px] font-bold transition-colors ${active ? "border-[#2156D9] text-[#2156D9]" : "border-transparent text-slate-700 hover:border-slate-300 hover:text-[#2156D9]"}`;
 
             if (item.children) {
@@ -102,7 +104,14 @@ export default function Header({ onLoginClick }: HeaderProps) {
                   <DropdownMenuContent align="start" className="w-52 rounded-md border-slate-200 p-2 shadow-xl">
                     {item.children.map((child) => (
                       <DropdownMenuItem key={child.title} asChild className="rounded-sm py-2.5">
-                        <Link href={child.href} className="cursor-pointer font-medium" data-testid={`nav-${child.title}`}>{child.title}</Link>
+                        <Link
+                          href={child.href}
+                          className={`cursor-pointer font-medium ${location === child.href ? "text-[#2156D9]" : ""}`}
+                          aria-current={location === child.href ? "page" : undefined}
+                          data-testid={`nav-${child.title}`}
+                        >
+                          {child.title}
+                        </Link>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -120,7 +129,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild className="xl:hidden">
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-md border-slate-300" data-testid="button-menu" aria-label="전체 메뉴 열기">
+            <Button variant="outline" size="icon" className="h-11 w-11 rounded-md border-slate-300" data-testid="button-menu" aria-label="전체 메뉴 열기">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -135,15 +144,19 @@ export default function Header({ onLoginClick }: HeaderProps) {
             </div>
 
             <nav className="mt-5 flex flex-col" aria-label="모바일 주요 메뉴">
-              {navItems.map((item) => (
+              {navItems.map((item) => {
+                const active = item.children
+                  ? location === item.href || item.children.some((child) => location === child.href)
+                  : location === item.href;
+                return (
                 <div key={item.title} className="border-b border-slate-100 py-1">
                   {item.external ? (
                     <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-2 py-3 text-base font-bold text-slate-800" data-testid={`mobile-nav-${item.title}`}>{item.title}</a>
                   ) : (
-                    <Link href={item.href} onClick={() => setMobileOpen(false)} className={`block px-2 py-3 text-base font-bold ${location === item.href ? "text-[#2156D9]" : "text-slate-800"}`} data-testid={`mobile-nav-${item.title}`}>{item.title}</Link>
+                    <Link href={item.href} onClick={() => setMobileOpen(false)} className={`block px-2 py-3 text-base font-bold ${active ? "text-[#2156D9]" : "text-slate-800"}`} data-testid={`mobile-nav-${item.title}`}>{item.title}</Link>
                   )}
                   {item.children && (
-                    <div className="mb-2 grid grid-cols-2 gap-1 rounded-md bg-slate-50 p-2">
+                    <div className="mb-2 grid grid-cols-1 gap-1 rounded-md bg-slate-50 p-2">
                       {item.children.map((child) => (
                         <Link
                           key={child.title}
@@ -159,7 +172,8 @@ export default function Header({ onLoginClick }: HeaderProps) {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </nav>
 
             {sessionUser ? (

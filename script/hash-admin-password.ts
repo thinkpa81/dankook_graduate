@@ -2,13 +2,7 @@ import { hashPassword } from "../server/security";
 
 function readHidden(prompt: string): Promise<string> {
   if (!process.stdin.isTTY) {
-    return new Promise((resolve, reject) => {
-      let value = "";
-      process.stdin.setEncoding("utf8");
-      process.stdin.on("data", chunk => { value += chunk; });
-      process.stdin.on("end", () => resolve(value.trimEnd()));
-      process.stdin.on("error", reject);
-    });
+    return Promise.reject(new Error("보안을 위해 대화형 터미널에서 숨김 입력으로 실행해 주세요."));
   }
 
   return new Promise((resolve, reject) => {
@@ -53,10 +47,8 @@ try {
   if (password.length < 10 || password.length > 128) {
     throw new Error("비밀번호는 10자 이상 128자 이하여야 합니다.");
   }
-  if (process.stdin.isTTY) {
-    const confirmation = await readHidden("비밀번호 확인: ");
-    if (password !== confirmation) throw new Error("비밀번호가 일치하지 않습니다.");
-  }
+  const confirmation = await readHidden("비밀번호 확인: ");
+  if (password !== confirmation) throw new Error("비밀번호가 일치하지 않습니다.");
   console.log(await hashPassword(password));
 } catch (error) {
   console.error(error instanceof Error ? error.message : "비밀번호 해시 생성에 실패했습니다.");

@@ -1,5 +1,7 @@
 # 🆓 Render 무료 배포 가이드
 
+> **2026-08-24 운영 기준:** 실제 서비스는 `thinkpa81/dankook_graduate`의 `main`과 `render.yaml`을 사용합니다. 보안·관리자 절차는 `docs/SECURITY_OPERATIONS.md`가 우선하며, 비밀번호·해시·DB URL·세션 비밀을 이 문서나 Git에 기록하지 않습니다. 요금제·슬립·기본 Node 버전은 변경될 수 있으므로 Render Dashboard와 공식 문서를 최종 기준으로 확인합니다.
+
 ## 🎯 완전 무료 영구 호스팅!
 
 Render는 **신용카드 없이** 완전 무료로 웹사이트를 영구적으로 호스팅할 수 있습니다.
@@ -80,7 +82,7 @@ Runtime: Node
 **빌드 & 시작 설정:**
 
 ```
-Build Command: npm install && npm run build
+Build Command: npm ci --legacy-peer-deps && npm run build
 Start Command: npm run start
 ```
 
@@ -123,7 +125,7 @@ Instance Type: Free (무료 선택)
 3. **배포 진행 단계:**
    ```
    ✓ Building...
-     - npm install (의존성 설치)
+     - npm ci --legacy-peer-deps (lockfile 기준 의존성 설치)
      - npm run build (프로젝트 빌드)
    ✓ Deploying...
    ✓ Live!
@@ -157,12 +159,13 @@ Instance Type: Free (무료 선택)
 **GitHub에 코드를 푸시하면 자동으로 재배포됩니다:**
 
 ```bash
-# 로컬에서 코드 수정
-git add .
-git commit -m "Update website"
-git push origin main
+# 검토된 변경 파일만 명시적으로 스테이징
+git status --short
+git add <검토한-파일-경로>
+git commit -m "학과소개·모집요강 화면 및 운영 검증 보완"
+git push origin <작업-브랜치>
 
-# Render가 자동으로 감지하고 재배포 시작
+# PR 검사 통과 후 main에 병합하면 Render 자동 배포 시작
 # 3-5분 후 자동 업데이트 완료
 ```
 
@@ -205,7 +208,7 @@ git push origin main
 #### 오류: "Build command failed"
 ```bash
 해결: Build Command 확인
-- 정확히 "npm install && npm run build" 인지 확인
+- 정확히 "npm ci --legacy-peer-deps && npm run build" 인지 확인
 ```
 
 ### 서버 시작 실패 시

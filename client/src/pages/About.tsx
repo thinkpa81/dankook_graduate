@@ -56,61 +56,63 @@ function AdvisorSection() {
   return (
     <section className="bg-gray-50 py-12 lg:py-16" aria-labelledby="advisor-heading">
       <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-10 text-center"
-        >
-          <p className="mb-1 text-base font-semibold text-primary">ADVISOR</p>
-          <h2 id="advisor-heading" className="text-3xl font-black text-gray-900 lg:text-4xl">
-            지도교수
-          </h2>
-        </motion.div>
-
         <Card
-          className="mx-auto mb-8 max-w-5xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
+          className="mx-auto mb-8 max-w-6xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
           data-testid="advisor-profile"
         >
           <CardContent className="p-0">
-            <div className="grid md:grid-cols-[260px_minmax(0,1fr)]">
-              <div className="flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8 md:items-start md:pt-28 lg:px-10">
+            <div className="grid lg:grid-cols-[276px_minmax(0,1fr)]">
+              <div className="min-w-0 bg-[#F3F8FF] p-6 sm:p-8 lg:p-7">
+                <h2 id="advisor-heading">
+                  <span className="block text-sm font-bold tracking-[0.08em] text-[#2156D9]">지도교수</span>
+                  <span className="mt-1 block text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">
+                    서응교 교수
+                  </span>
+                </h2>
+
                 <img
                   src="/portrait_transparent.png"
                   alt="서응교 지도교수"
-                  className="h-44 w-44 object-contain sm:h-48 sm:w-48"
+                  className="mx-auto mt-6 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48"
                   width="210"
                   height="196"
                   loading="eager"
                   decoding="async"
                   data-testid="advisor-portrait"
                 />
-              </div>
 
-              <div className="p-7 sm:p-8 lg:p-10">
-                <p className="mb-2 text-sm font-bold tracking-wide text-primary">지도교수</p>
-                <h3 className="text-2xl font-black text-gray-900 sm:text-3xl">서응교 교수</h3>
-
-                <div className="mt-5 flex items-start gap-2.5 text-base text-slate-600">
+                <div className="mt-7 flex min-w-0 items-start gap-2.5 text-[15px] leading-6 text-slate-700">
                   <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-                  <div>
+                  <div className="min-w-0">
                     <p>단국대학교 대학원 데이터지식서비스공학과</p>
-                    <p className="mt-2 text-sm font-semibold leading-relaxed text-primary">
+                    <p className="mt-3 text-sm font-semibold leading-6 text-[#2156D9]">
                       AIMS Lab(에임즈 랩): AI, Innovation, Metaverse &amp; Service Lab
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-7 border-t border-slate-200 pt-6">
-                  <h4 className="text-base font-bold text-slate-900">연구관심분야</h4>
-                  <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
+                <a
+                  href="mailto:eungkyosuh@dankook.ac.kr"
+                  className="mt-6 inline-flex min-w-0 max-w-full items-start gap-2 text-[15px] font-semibold text-[#2156D9] underline-offset-4 [overflow-wrap:anywhere] hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2156D9]"
+                  data-testid="advisor-email"
+                >
+                  <Mail className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">eungkyosuh@dankook.ac.kr</span>
+                </a>
+              </div>
+
+              <div className="min-w-0 bg-white p-6 sm:p-8 lg:p-10">
+                <div>
+                  <p className="text-sm font-bold tracking-[0.08em] text-[#2156D9]">RESEARCH INTERESTS</p>
+                  <h3 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">연구관심분야</h3>
+                  <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
                     {advisorResearchInterests.map((interest, index) => (
                       <li
                         key={interest}
-                        className={`flex min-h-[68px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700 ${
+                        className={`flex min-h-[72px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700 ${
                           index >= 8
-                            ? "lg:col-span-2 lg:min-h-[124px] lg:justify-center lg:px-8 lg:text-center lg:text-base lg:font-bold"
-                            : "lg:min-h-[76px]"
+                            ? "lg:col-span-2 lg:min-h-[112px] lg:justify-center lg:px-8 lg:text-center lg:text-base lg:font-bold"
+                            : "lg:min-h-[78px]"
                         }`}
                       >
                         {interest}
@@ -119,20 +121,7 @@ function AdvisorSection() {
                   </ul>
                 </div>
 
-                <div className="mt-6 border-t border-slate-200 pt-6">
-                  <a
-                    href="mailto:eungkyosuh@dankook.ac.kr"
-                    className="inline-flex items-center gap-2 break-all text-base font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-                    data-testid="advisor-email"
-                  >
-                    <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
-                    <span>eungkyosuh@dankook.ac.kr</span>
-                  </a>
-                </div>
-
-                <div className="mt-8 -mx-7 -mb-7 sm:-mx-8 sm:-mb-8 lg:-mx-10 lg:-mb-10">
-                  <DoctoralContactGuide />
-                </div>
+                <DoctoralContactGuide />
               </div>
             </div>
           </CardContent>
@@ -163,7 +152,7 @@ export default function About() {
   const [loginOpen, setLoginOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen overflow-x-clip flex flex-col bg-gray-50">
       <Header onLoginClick={() => setLoginOpen(true)} />
 
       <PageHero

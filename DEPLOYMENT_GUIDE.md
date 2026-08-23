@@ -1,5 +1,7 @@
 # 🚀 Cloudflare Pages 배포 - 단계별 실행 가이드
 
+> **폐기된 대체 플랫폼 문서:** 현재 운영 대상은 Render이며 이 Cloudflare 절차를 실행하지 않습니다. 현행 배포·보안 절차는 `RENDER_DEPLOY.md`, `render.yaml`, `docs/SECURITY_OPERATIONS.md`를 따릅니다.
+
 ## ✅ 배포 준비 완료 상태
 - ✅ 프로젝트 빌드 완료 (`dist/public/` 디렉토리)
 - ✅ GitHub 저장소에 푸시 완료
