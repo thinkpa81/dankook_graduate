@@ -79,30 +79,43 @@ export async function hashPassword(password: string): Promise<string> {
   ].join("$");
 }
 
-export function isPasswordHash(value: string): boolean {
-  return value.startsWith(PASSWORD_HASH_PREFIX);
-}
+type ParsedPasswordHash = {
+  N: number;
+  r: number;
+  p: number;
+  salt: Buffer;
+  expected: Buffer;
+};
 
-export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
-  const parts = encodedHash.split("$");
-  if (parts.length !== 7 || parts[0] !== "scrypt" || parts[1] !== "v1") {
-    return false;
-  }
+function parsePasswordHash(value: string): ParsedPasswordHash | null {
+  if (!value.startsWith(PASSWORD_HASH_PREFIX)) return null;
+  const parts = value.split("$");
+  if (parts.length !== 7 || parts[0] !== "scrypt" || parts[1] !== "v1") return null;
 
   const N = Number(parts[2]);
   const r = Number(parts[3]);
   const p = Number(parts[4]);
-  if (N !== SCRYPT_N || r !== SCRYPT_R || p !== SCRYPT_P) {
-    return false;
-  }
+  if (N !== SCRYPT_N || r !== SCRYPT_R || p !== SCRYPT_P) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(parts[5]) || !/^[A-Za-z0-9_-]+$/.test(parts[6])) return null;
+
+  const salt = Buffer.from(parts[5], "base64url");
+  const expected = Buffer.from(parts[6], "base64url");
+  if (salt.length !== 16 || expected.length !== SCRYPT_KEY_LENGTH) return null;
+  if (salt.toString("base64url") !== parts[5] || expected.toString("base64url") !== parts[6]) return null;
+  return { N, r, p, salt, expected };
+}
+
+export function isPasswordHash(value: string): boolean {
+  return parsePasswordHash(value) !== null;
+}
+
+export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
+  const parsed = parsePasswordHash(encodedHash);
+  if (!parsed) return false;
 
   try {
-    const salt = Buffer.from(parts[5], "base64url");
-    const expected = Buffer.from(parts[6], "base64url");
-    if (salt.length !== 16 || expected.length !== SCRYPT_KEY_LENGTH) return false;
-
-    const actual = await derivePasswordKey(password, salt, { N, r, p });
-    return timingSafeEqual(actual, expected);
+    const actual = await derivePasswordKey(password, parsed.salt, parsed);
+    return timingSafeEqual(actual, parsed.expected);
   } catch {
     return false;
   }

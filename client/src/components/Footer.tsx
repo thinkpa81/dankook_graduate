@@ -62,9 +62,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/talent-pool" className="hover:text-blue-400 transition-colors flex items-center gap-2 group" data-testid="footer-link-talent">
+                <Link href="/admissions/guidelines" className="hover:text-blue-400 transition-colors flex items-center gap-2 group" data-testid="footer-link-admissions">
                   <span className="w-1 h-1 bg-blue-500 rounded-full group-hover:w-2 transition-all" />
-                  인재풀 등록
+                  입학안내 · 모집요강
                 </Link>
               </li>
             </ul>
@@ -99,11 +99,7 @@ export default function Footer() {
         <div className="border-t border-slate-700/50 mt-12 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-base text-slate-500">
             <p>Copyright (C) DANKOOK UNIVERSITY All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-blue-400 transition-colors" data-testid="footer-privacy">
-                개인정보처리방침
-              </Link>
-            </div>
+            <p className="text-sm">본 사이트는 방문자 개인정보 입력·수집 양식을 운영하지 않습니다.</p>
           </div>
         </div>
       </div>

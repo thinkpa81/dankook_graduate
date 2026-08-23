@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
+import DoctoralContactGuide from "@/components/DoctoralContactGuide";
 
 const curriculum = {
   common: [
@@ -127,6 +128,10 @@ function AdvisorSection() {
                     <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
                     <span>eungkyosuh@dankook.ac.kr</span>
                   </a>
+                </div>
+
+                <div className="mt-8 -mx-7 -mb-7 sm:-mx-8 sm:-mb-8 lg:-mx-10 lg:-mb-10">
+                  <DoctoralContactGuide />
                 </div>
               </div>
             </div>

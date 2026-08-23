@@ -42,7 +42,7 @@ if (hasAdminPasswordHash && !isPasswordHash(process.env.ADMIN_PASSWORD_HASH!.tri
   throw new Error("ADMIN_PASSWORD_HASH must use the supported scrypt format");
 }
 if (process.env.NODE_ENV === "production" && !hasAdminUsername) {
-  console.warn("Administrative login is disabled until secure administrator variables are configured");
+  console.warn("No environment administrator is configured; a one-time database administrator setup code will be emitted when required");
 }
 
 declare module "express-session" {
@@ -52,6 +52,7 @@ declare module "express-session" {
       username: string;
       name: string;
       role: AppRole;
+      authVersion: number;
     };
     createdAt?: number;
   }
@@ -140,6 +141,8 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/users", noStore);
+app.use("/api/admins", noStore);
+app.use("/api/admin-bootstrap", noStore);
 app.use("/api/talents", noStore);
 
 export function log(message: string, source = "express") {

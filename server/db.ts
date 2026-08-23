@@ -15,7 +15,7 @@ if (!databaseUrl) {
 
 const poolConfig: pg.PoolConfig = {
   connectionString: databaseUrl,
-  ssl: databaseUrl.includes('neon.tech') ? { rejectUnauthorized: false } : undefined,
+  ssl: databaseUrl.includes('neon.tech') ? { rejectUnauthorized: true } : undefined,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -56,10 +56,11 @@ export async function ensureTablesExist() {
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         name TEXT NOT NULL,
-        email TEXT NOT NULL,
+        email TEXT,
         role TEXT NOT NULL DEFAULT 'user',
         status TEXT NOT NULL DEFAULT 'active',
         password_reset_required BOOLEAN NOT NULL DEFAULT false,
+        auth_version INTEGER NOT NULL DEFAULT 1,
         registered_at TEXT NOT NULL,
         registered_time TEXT NOT NULL
       );
@@ -126,9 +127,27 @@ export async function ensureTablesExist() {
         retention_until TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '2 years'
       );
 
+      CREATE TABLE IF NOT EXISTS admission_guidelines (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        organization TEXT NOT NULL,
+        date TEXT NOT NULL,
+        views INTEGER NOT NULL DEFAULT 0,
+        attachment_url TEXT,
+        attachment_name TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS app_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
       ALTER TABLE notice_comments ADD COLUMN IF NOT EXISTS user_id INTEGER;
       ALTER TABLE paper_comments ADD COLUMN IF NOT EXISTS user_id INTEGER;
       ALTER TABLE talents ADD COLUMN IF NOT EXISTS consent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -137,13 +156,67 @@ export async function ensureTablesExist() {
       CREATE INDEX IF NOT EXISTS idx_talents_retention_until ON talents(retention_until);
       CREATE INDEX IF NOT EXISTS idx_notice_comments_user_id ON notice_comments(user_id);
       CREATE INDEX IF NOT EXISTS idx_paper_comments_user_id ON paper_comments(user_id);
+      CREATE INDEX IF NOT EXISTS idx_admission_guidelines_date ON admission_guidelines(date DESC);
+
+      UPDATE admission_guidelines
+      SET date = replace(date, '.', '-')
+      WHERE date ~ '^[0-9]{4}[.][0-9]{2}[.][0-9]{2}$';
     `);
+
+    await client.query("BEGIN");
+    try {
+      const admissionSeedMigration = await client.query(`
+        INSERT INTO app_migrations (id)
+        VALUES ('2026-08-23-admission-guidelines-seed-v1')
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id;
+      `);
+      if (admissionSeedMigration.rowCount) {
+        await client.query(`
+        INSERT INTO admission_guidelines
+          (title, content, organization, date, views, attachment_url, attachment_name)
+        SELECT seed.title, seed.content, seed.organization, seed.date, 0, seed.attachment_url, seed.attachment_name
+        FROM (VALUES
+          (
+            '단국대학교 대학원 입학전형 모집요강',
+            '지원 자격, 모집 일정과 제출서류는 단국대학교 대학원 공식 모집요강에서 확인해 주세요.',
+            '단국대학교 대학원',
+            '2026-08-23',
+            'https://grad.dankook.ac.kr/-91',
+            '단국대학교 공식 모집요강'
+          ),
+          (
+            '대학원 입학 지원 절차 및 제출서류 안내',
+            '입학 지원 절차와 전형별 제출서류는 단국대학교 대학원 입학 안내를 기준으로 확인해 주세요.',
+            '단국대학교 대학원',
+            '2026-08-23',
+            'https://grad.dankook.ac.kr/web/kor/graduate_ipsi',
+            '대학원 입학 안내'
+          ),
+          (
+            '데이터지식서비스공학과 박사과정 사전 컨택 안내',
+            '정식 지원 전 지도교수에게 연구 관심분야와 면담 희망 일정을 이메일로 문의해 주세요. 세부 작성 방법은 학과 소개에서 확인할 수 있습니다.',
+            '데이터지식서비스공학과',
+            '2026-08-23',
+            NULL,
+            NULL
+          )
+        ) AS seed(title, content, organization, date, attachment_url, attachment_name)
+        WHERE NOT EXISTS (SELECT 1 FROM admission_guidelines);
+        `);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
 
     const invalidated = await client.query(`
       UPDATE users
       SET
         password = 'disabled$' || md5(random()::text || clock_timestamp()::text || id::text),
-        password_reset_required = true
+        password_reset_required = true,
+        auth_version = auth_version + 1
       WHERE password NOT LIKE 'scrypt$v1$%'
         AND password NOT LIKE 'disabled$%'
     `);

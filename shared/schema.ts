@@ -9,10 +9,11 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  email: text("email").notNull(),
+  email: text("email"),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("active"),
   passwordResetRequired: boolean("password_reset_required").notNull().default(false),
+  authVersion: integer("auth_version").notNull().default(1),
   registeredAt: text("registered_at").notNull(),
   registeredTime: text("registered_time").notNull(),
 });
@@ -25,9 +26,25 @@ export const insertUserSchema = createInsertSchema(users).omit({
   role: true,
   status: true,
   passwordResetRequired: true,
+  authVersion: true,
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const admissionGuidelines = pgTable("admission_guidelines", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  organization: text("organization").notNull(),
+  date: text("date").notNull(),
+  views: integer("views").notNull().default(0),
+  attachmentUrl: text("attachment_url"),
+  attachmentName: text("attachment_name"),
+});
+
+export const insertAdmissionGuidelineSchema = createInsertSchema(admissionGuidelines).omit({ id: true });
+export type InsertAdmissionGuideline = z.infer<typeof insertAdmissionGuidelineSchema>;
+export type AdmissionGuideline = typeof admissionGuidelines.$inferSelect;
 
 export const notices = pgTable("notices", {
   id: serial("id").primaryKey(),

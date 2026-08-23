@@ -12,6 +12,38 @@ export interface User {
   passwordResetRequired: boolean;
 }
 
+export interface AdminAccount {
+  id: number;
+  username: string;
+  name: string;
+  role: string;
+  status: string;
+  passwordResetRequired: boolean;
+  registeredAt: string;
+  registeredTime: string;
+}
+
+export interface AdminBootstrapStatus {
+  required: boolean;
+  expiresAt: string | null;
+}
+
+export interface AdmissionGuideline {
+  id: number;
+  title: string;
+  content: string;
+  organization: string;
+  date: string;
+  views: number;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
+}
+
+export type AdmissionGuidelineInput = Pick<
+  AdmissionGuideline,
+  "title" | "content" | "organization" | "date" | "attachmentUrl" | "attachmentName"
+>;
+
 export interface SessionUser {
   id: number;
   username: string;
@@ -178,6 +210,30 @@ export const api = {
     resetPassword: (id: number, password: string) =>
       fetchApi<{ success: boolean }>(`/users/${id}/password`, { method: "PATCH", body: JSON.stringify({ password }) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/users/${id}`, { method: "DELETE" }),
+  },
+  admins: {
+    list: () => fetchApi<AdminAccount[]>("/admins"),
+    create: (data: { username: string; name: string; password: string }) =>
+      fetchApi<AdminAccount>("/admins", { method: "POST", body: JSON.stringify(data) }),
+    resetPassword: (id: number, password: string) =>
+      fetchApi<{ success: boolean }>(`/admins/${id}/password`, { method: "PATCH", body: JSON.stringify({ password }) }),
+    delete: (id: number) => fetchApi<{ success: boolean }>(`/admins/${id}`, { method: "DELETE" }),
+  },
+  adminBootstrap: {
+    status: () => fetchApi<AdminBootstrapStatus>("/admin-bootstrap/status"),
+    setup: (data: { setupCode: string; username: string; name: string; password: string }) =>
+      fetchApi<AdminAccount>("/admin-bootstrap/setup", { method: "POST", body: JSON.stringify(data) }),
+  },
+  admissions: {
+    list: () => fetchApi<AdmissionGuideline[]>("/admissions"),
+    get: (id: number) => fetchApi<AdmissionGuideline>(`/admissions/${id}`),
+    create: (data: AdmissionGuidelineInput) =>
+      fetchApi<AdmissionGuideline>("/admissions", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<AdmissionGuidelineInput>) =>
+      fetchApi<AdmissionGuideline>(`/admissions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: number) => fetchApi<{ success: boolean }>(`/admissions/${id}`, { method: "DELETE" }),
+    incrementViews: (id: number) =>
+      fetchApi<{ success: boolean; views: number }>(`/admissions/${id}/views`, { method: "PATCH" }),
   },
   notices: {
     list: () => fetchApi<Notice[]>("/notices"),
