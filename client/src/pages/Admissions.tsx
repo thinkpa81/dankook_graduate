@@ -480,7 +480,7 @@ export default function Admissions() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting} className="h-11 rounded-md">취소</AlertDialogCancel>
-            <AlertDialogAction disabled={deleting} onClick={() => void deleteGuideline()} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction>
+            <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deleteGuideline(); }} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

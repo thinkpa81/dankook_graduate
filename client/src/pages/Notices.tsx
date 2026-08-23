@@ -599,7 +599,7 @@ export default function Notices() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting} className="h-11 rounded-lg">취소</AlertDialogCancel>
-            <AlertDialogAction disabled={deleting} onClick={handleDelete} className="h-11 rounded-lg bg-destructive text-destructive-foreground">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction>
+            <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void handleDelete(); }} className="h-11 rounded-lg bg-destructive text-destructive-foreground">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

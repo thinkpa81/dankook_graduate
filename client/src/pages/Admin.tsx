@@ -340,7 +340,7 @@ export default function Admin() {
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader><AlertDialogTitle>관리자 계정을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>삭제한 계정은 즉시 관리자 기능을 사용할 수 없습니다. 현재 계정과 마지막 활성 관리자는 삭제할 수 없습니다.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-md">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={() => void deleteAdmin()} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-md">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deleteAdmin(); }} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
