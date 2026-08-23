@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, Award, ExternalLink, Database, Globe, Mail, Building } from "lucide-react";
+import { GraduationCap, Award, ExternalLink, Database, Globe, Building } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ function AdvisorSection() {
                 <img
                   src="/portrait_transparent.png"
                   alt="서응교 지도교수"
-                  className="mx-auto mt-6 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48"
+                  className="mx-auto mt-8 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48"
                   width="210"
                   height="196"
                   loading="eager"
@@ -91,14 +91,6 @@ function AdvisorSection() {
                   </div>
                 </div>
 
-                <a
-                  href="mailto:eungkyosuh@dankook.ac.kr"
-                  className="mt-6 inline-flex min-w-0 max-w-full items-start gap-2 text-[15px] font-semibold text-[#2156D9] underline-offset-4 [overflow-wrap:anywhere] hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2156D9]"
-                  data-testid="advisor-email"
-                >
-                  <Mail className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 [overflow-wrap:anywhere]">eungkyosuh@dankook.ac.kr</span>
-                </a>
               </div>
 
               <div className="min-w-0 bg-white p-6 sm:p-8 lg:p-10">
