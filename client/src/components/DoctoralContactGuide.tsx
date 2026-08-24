@@ -11,16 +11,14 @@ export default function DoctoralContactGuide() {
       data-testid="doctoral-contact-guide"
     >
       <div className="min-w-0">
-        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-[#2156D9] shadow-sm sm:h-12 sm:w-12" aria-hidden="true">
+        <div className="grid min-w-0 grid-cols-[44px_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[48px_minmax(0,1fr)] sm:gap-x-4">
+          <span className="row-span-2 flex h-11 w-11 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-[#2156D9] shadow-sm max-[359px]:row-span-1 sm:h-12 sm:w-12" aria-hidden="true">
             <GraduationCap className="h-6 w-6 sm:h-7 sm:w-7" />
           </span>
-          <div className="min-w-0">
-            <p className="text-[17px] font-bold tracking-[0.08em] text-[#2156D9] sm:text-lg">DOCTORAL PROGRAM CONTACT</p>
-            <h3 id="doctoral-contact-heading" className="mt-1.5 text-[2rem] font-black leading-[1.2] tracking-[-0.03em] text-slate-950 sm:text-[2.5rem] sm:leading-[1.15]">
-              박사과정 컨택
-            </h3>
-          </div>
+          <p className="col-start-2 text-[17px] font-bold tracking-[0.08em] text-[#2156D9] max-[359px]:text-base max-[359px]:tracking-normal sm:text-lg">DOCTORAL PROGRAM CONTACT</p>
+          <h3 id="doctoral-contact-heading" className="col-start-2 mt-1.5 text-[2rem] font-black leading-[1.2] tracking-[-0.03em] text-slate-950 max-[359px]:col-span-2 max-[359px]:col-start-1 max-[359px]:mt-2.5 sm:text-[2.5rem] sm:leading-[1.15]">
+            박사과정 컨택
+          </h3>
         </div>
         <p className="mt-6 text-[17px] leading-8 text-slate-600 sm:text-[19px] sm:leading-9">
           지원에 앞서, 아래의 간단한 양식에 맞춰 지도교수님께 이메일로 먼저 문의해 주시기 바랍니다.
