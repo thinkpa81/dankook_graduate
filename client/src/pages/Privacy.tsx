@@ -11,7 +11,7 @@ export default function Privacy() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <section className="hero-gradient hero-pattern text-white py-20 lg:py-24 relative overflow-hidden">
         <div className="absolute inset-0">

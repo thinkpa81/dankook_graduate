@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/collapsible";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 
 const regulations = [
@@ -130,7 +129,6 @@ const regulations = [
 ];
 
 export default function Regulations() {
-  const [loginOpen, setLoginOpen] = useState(false);
   const [openItems, setOpenItems] = useState<number[]>([]);
   const [showAll, setShowAll] = useState(false);
 
@@ -151,7 +149,7 @@ export default function Regulations() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="REGULATIONS"
@@ -257,7 +255,6 @@ export default function Regulations() {
       </section>
 
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

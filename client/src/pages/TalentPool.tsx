@@ -208,7 +208,7 @@ export default function TalentPool() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="TALENT POOL"

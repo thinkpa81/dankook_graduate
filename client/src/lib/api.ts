@@ -71,14 +71,8 @@ export interface Notice {
   comments: NoticeComment[];
 }
 
-export interface PaperComment {
-  id: number;
-  paperId: number;
-  author: string;
-  content: string;
-  date: string;
-  canEdit?: boolean;
-}
+export type NoticeCreateInput = Pick<Notice, "title" | "content" | "date" | "isImportant" | "files">;
+export type NoticeUpdateInput = Partial<Omit<NoticeCreateInput, "date">>;
 
 export interface Paper {
   id: number;
@@ -97,8 +91,10 @@ export interface Paper {
   websiteUrl: string | null;
   date: string;
   views: number;
-  comments: PaperComment[];
 }
+
+export type PaperCreateInput = Omit<Paper, "id" | "views">;
+export type PaperUpdateInput = Partial<Omit<PaperCreateInput, "date">>;
 
 export interface Talent {
   id: number;
@@ -238,9 +234,9 @@ export const api = {
   notices: {
     list: () => fetchApi<Notice[]>("/notices"),
     get: (id: number) => fetchApi<Notice>(`/notices/${id}`),
-    create: (data: Omit<Notice, "id" | "comments">) =>
+    create: (data: NoticeCreateInput) =>
       fetchApi<Notice>("/notices", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: Partial<Notice>) =>
+    update: (id: number, data: NoticeUpdateInput) =>
       fetchApi<Notice>(`/notices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/notices/${id}`, { method: "DELETE" }),
     incrementViews: (id: number) => fetchApi<{ success: boolean }>(`/notices/${id}/views`, { method: "PATCH" }),
@@ -254,18 +250,12 @@ export const api = {
   papers: {
     list: () => fetchApi<Paper[]>("/papers"),
     get: (id: number) => fetchApi<Paper>(`/papers/${id}`),
-    create: (data: Omit<Paper, "id" | "comments">) =>
+    create: (data: PaperCreateInput) =>
       fetchApi<Paper>("/papers", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: Partial<Paper>) =>
+    update: (id: number, data: PaperUpdateInput) =>
       fetchApi<Paper>(`/papers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetchApi<{ success: boolean }>(`/papers/${id}`, { method: "DELETE" }),
     incrementViews: (id: number) => fetchApi<{ success: boolean }>(`/papers/${id}/views`, { method: "PATCH" }),
-    addComment: (paperId: number, data: { content: string }) =>
-      fetchApi<PaperComment>(`/papers/${paperId}/comments`, { method: "POST", body: JSON.stringify(data) }),
-    updateComment: (commentId: number, content: string) =>
-      fetchApi<PaperComment>(`/paper-comments/${commentId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
-    deleteComment: (commentId: number) =>
-      fetchApi<{ success: boolean }>(`/paper-comments/${commentId}`, { method: "DELETE" }),
   },
   talents: {
     list: () => fetchApi<Talent[]>("/talents"),

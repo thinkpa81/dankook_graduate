@@ -5,7 +5,7 @@ import fs from "fs";
 import multer from "multer";
 import path from "path";
 import { z } from "zod";
-import { getStorage } from "./storage";
+import { getStorage, type IStorage } from "./storage";
 import {
   auditEvent,
   hashPassword,
@@ -54,7 +54,17 @@ const loginLimiter = rateLimit({
 const bootstrapLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
 const commentLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10 });
 const viewLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120 });
-const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+const downloadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120 });
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: "파일 업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요",
+});
+const publicContentMutationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "콘텐츠 변경 요청이 너무 많습니다. 잠시 후 다시 시도해주세요",
+});
 
 const usernameSchema = z.string().trim().min(4).max(32).regex(/^[A-Za-z0-9._-]+$/);
 const passwordSchema = z.string().min(10).max(128);
@@ -136,6 +146,11 @@ const admissionGuidelineUpdateSchema = admissionGuidelineCreateSchema
   .partial()
   .refine(value => Object.keys(value).length > 0);
 const commentSchema = z.object({ content: z.string().trim().min(1).max(2_000) });
+
+const retiredPaperCommentWrite: RequestHandler = (_req, res) => res.status(410).json({
+  error: "논문 댓글 기능은 종료되었습니다",
+  code: "PAPER_COMMENT_API_RETIRED",
+});
 
 type AsyncRoute = (req: Request, res: Response, next: NextFunction) => Promise<unknown>;
 const asyncHandler = (handler: AsyncRoute): RequestHandler => (req, res, next) => {
@@ -264,8 +279,8 @@ function currentKoreanDateTime() {
 
 const dummyPasswordHash = hashPassword(randomBytes(32).toString("hex"));
 
-export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  const storage = getStorage();
+export async function registerRoutes(httpServer: Server, app: Express, storageOverride?: IStorage): Promise<Server> {
+  const storage = storageOverride ?? getStorage();
   const configuredAdminUsername = process.env.ADMIN_USERNAME?.trim();
   const configuredAdminHash = process.env.ADMIN_PASSWORD_HASH?.trim();
   const hasConfiguredAdmin = Boolean(configuredAdminUsername && configuredAdminHash);
@@ -318,15 +333,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }));
   }
 
-  await ensureBootstrapCode();
-
   app.use(["/api/admins", "/api/admin-bootstrap"], (_req, res, next) => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.setHeader("Pragma", "no-cache");
     next();
   });
 
-  app.get("/uploads/:filename", adminOnly, asyncHandler(async (req, res) => {
+  app.get("/uploads/:filename", downloadLimiter, asyncHandler(async (req, res) => {
     const filename = req.params.filename;
     const extension = path.extname(filename).toLowerCase();
     if (!filename || filename.length > 255 || path.basename(filename) !== filename || !FILE_TYPES[extension]) {
@@ -343,7 +356,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.download(filePath, filename);
   }));
 
-  app.post("/api/upload", adminOnly, uploadLimiter, (req, res) => {
+  app.post("/api/upload", uploadLimiter, (req, res) => {
     upload.array("files", 5)(req, res, async error => {
       if (error instanceof multer.MulterError) {
         const message = error.code === "LIMIT_FILE_SIZE"
@@ -627,7 +640,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(guideline);
   }));
 
-  app.post("/api/admissions", adminOnly, asyncHandler(async (req, res) => {
+  app.post("/api/admissions", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(admissionGuidelineCreateSchema, req, res);
     if (!input) return;
     const guideline = await storage.createAdmissionGuideline({
@@ -640,7 +653,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.status(201).json(guideline);
   }));
 
-  app.patch("/api/admissions/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.patch("/api/admissions/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(admissionGuidelineUpdateSchema, req, res);
     if (!id || !input) return;
@@ -652,7 +665,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(guideline);
   }));
 
-  app.delete("/api/admissions/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.delete("/api/admissions/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getAdmissionGuideline(id)) {
@@ -689,7 +702,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ ...notice, comments: (await storage.getNoticeComments(id)).map(comment => publicComment(req, comment)) });
   }));
 
-  app.post("/api/notices", adminOnly, asyncHandler(async (req, res) => {
+  app.post("/api/notices", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(noticeCreateSchema, req, res);
     if (!input) return;
     const notice = await storage.createNotice({ ...input, views: 0 });
@@ -697,7 +710,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.status(201).json({ ...notice, comments: [] });
   }));
 
-  app.patch("/api/notices/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.patch("/api/notices/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(noticeUpdateSchema, req, res);
     if (!id || !input) return;
@@ -707,7 +720,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ ...notice, comments: (await storage.getNoticeComments(id)).map(comment => publicComment(req, comment)) });
   }));
 
-  app.delete("/api/notices/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.delete("/api/notices/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getNotice(id)) return res.status(404).json({ error: "공지사항을 찾을 수 없습니다", code: "NOTICE_NOT_FOUND" });
@@ -767,12 +780,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ success: true });
   }));
 
-  app.get("/api/papers", asyncHandler(async (req, res) => {
-    const papers = await storage.getPapers();
-    res.json(await Promise.all(papers.map(async paper => ({
-      ...paper,
-      comments: (await storage.getPaperComments(paper.id)).map(comment => publicComment(req, comment)),
-    }))));
+  app.get("/api/papers", asyncHandler(async (_req, res) => {
+    return res.json(await storage.getPapers());
   }));
 
   app.get("/api/papers/:id", asyncHandler(async (req, res) => {
@@ -780,28 +789,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!id) return;
     const paper = await storage.getPaper(id);
     if (!paper) return res.status(404).json({ error: "논문을 찾을 수 없습니다", code: "PAPER_NOT_FOUND" });
-    return res.json({ ...paper, comments: (await storage.getPaperComments(id)).map(comment => publicComment(req, comment)) });
+    return res.json(paper);
   }));
 
-  app.post("/api/papers", adminOnly, asyncHandler(async (req, res) => {
+  app.post("/api/papers", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(paperCreateSchema, req, res);
     if (!input) return;
     const paper = await storage.createPaper({ ...input, views: 0 });
     auditEvent(req, "paper.create", `paper:${paper.id}`);
-    return res.status(201).json({ ...paper, comments: [] });
+    return res.status(201).json(paper);
   }));
 
-  app.patch("/api/papers/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.patch("/api/papers/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(paperUpdateSchema, req, res);
     if (!id || !input) return;
     const paper = await storage.updatePaper(id, input);
     if (!paper) return res.status(404).json({ error: "논문을 찾을 수 없습니다", code: "PAPER_NOT_FOUND" });
     auditEvent(req, "paper.update", `paper:${id}`);
-    return res.json({ ...paper, comments: (await storage.getPaperComments(id)).map(comment => publicComment(req, comment)) });
+    return res.json(paper);
   }));
 
-  app.delete("/api/papers/:id", adminOnly, asyncHandler(async (req, res) => {
+  app.delete("/api/papers/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getPaper(id)) return res.status(404).json({ error: "논문을 찾을 수 없습니다", code: "PAPER_NOT_FOUND" });
@@ -818,48 +827,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json({ success: true });
   }));
 
-  app.post("/api/papers/:id/comments", adminOnly, commentLimiter, asyncHandler(async (req, res) => {
-    const paperId = parseId(req, res);
-    const input = parseBody(commentSchema, req, res);
-    if (!paperId || !input) return;
-    if (!await storage.getPaper(paperId)) return res.status(404).json({ error: "논문을 찾을 수 없습니다", code: "PAPER_NOT_FOUND" });
-    const comment = await storage.createPaperComment({
-      paperId,
-      userId: req.session.user!.id > 0 ? req.session.user!.id : null,
-      author: req.session.user!.role === "ADMIN" ? "관리자" : req.session.user!.username,
-      content: input.content,
-      date: currentKoreanDateTime().registeredAt,
-    });
-    auditEvent(req, "paper_comment.create", `comment:${comment.id}`);
-    return res.status(201).json(publicComment(req, comment));
-  }));
-
-  app.patch("/api/paper-comments/:id", adminOnly, asyncHandler(async (req, res) => {
-    const id = parseId(req, res);
-    const input = parseBody(commentSchema, req, res);
-    if (!id || !input) return;
-    const existing = await storage.getPaperComment(id);
-    if (!existing) return res.status(404).json({ error: "댓글을 찾을 수 없습니다", code: "COMMENT_NOT_FOUND" });
-    if (req.session.user!.role !== "ADMIN" && existing.userId !== req.session.user!.id) {
-      return res.status(403).json({ error: "댓글을 수정할 권한이 없습니다", code: "FORBIDDEN" });
-    }
-    const comment = await storage.updatePaperComment(id, input.content);
-    auditEvent(req, "paper_comment.update", `comment:${id}`);
-    return res.json(publicComment(req, comment!));
-  }));
-
-  app.delete("/api/paper-comments/:id", adminOnly, asyncHandler(async (req, res) => {
-    const id = parseId(req, res);
-    if (!id) return;
-    const existing = await storage.getPaperComment(id);
-    if (!existing) return res.status(404).json({ error: "댓글을 찾을 수 없습니다", code: "COMMENT_NOT_FOUND" });
-    if (req.session.user!.role !== "ADMIN" && existing.userId !== req.session.user!.id) {
-      return res.status(403).json({ error: "댓글을 삭제할 권한이 없습니다", code: "FORBIDDEN" });
-    }
-    await storage.deletePaperComment(id);
-    auditEvent(req, "paper_comment.delete", `comment:${id}`);
-    return res.json({ success: true });
-  }));
+  app.post("/api/papers/:id/comments", retiredPaperCommentWrite);
+  app.patch("/api/paper-comments/:id", retiredPaperCommentWrite);
+  app.delete("/api/paper-comments/:id", retiredPaperCommentWrite);
 
   app.all("/api/talents", (_req, res) => res.status(410).json({
     error: "인재풀 등록 기능은 종료되었습니다. 이메일 문의를 이용해주세요",

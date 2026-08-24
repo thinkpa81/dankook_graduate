@@ -44,6 +44,7 @@ export default function Admin() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [bootstrapRequired, setBootstrapRequired] = useState(false);
   const [bootstrapExpiresAt, setBootstrapExpiresAt] = useState<string | null>(null);
   const [bootstrapForm, setBootstrapForm] = useState({ setupCode: "", username: "", name: "", password: "", confirmPassword: "" });
@@ -168,18 +169,21 @@ export default function Admin() {
 
   const deleteAdmin = async () => {
     if (deleteId === null) return;
+    setDeleting(true);
     try {
       await api.admins.delete(deleteId);
       setDeleteId(null);
       await loadAdmins();
     } catch (caught) {
       window.alert(caught instanceof Error ? caught.message : "관리자 삭제에 실패했습니다.");
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <main className="flex-1 py-12 lg:py-16">
         <div className="mx-auto max-w-[1100px] px-5 sm:px-8 lg:px-10">
@@ -259,7 +263,7 @@ export default function Admin() {
                     <Link href="/papers"><BookOpen className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">논문</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
                   </Button>
                   <Button variant="outline" asChild className="h-auto min-h-24 justify-start rounded-xl border-slate-200 bg-white p-5 text-left shadow-sm hover:border-blue-200 hover:bg-blue-50/40">
-                    <Link href="/admissions/guidelines"><ClipboardList className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">모집요강</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
+                    <Link href="/admissions/guidelines"><ClipboardList className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">입학안내 · 모집요강</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
                   </Button>
                 </div>
               </section>
@@ -289,10 +293,10 @@ export default function Admin() {
                           </div>
                         </div>
                         <div className="flex gap-2 sm:justify-end">
-                          <Button variant="outline" size="sm" onClick={() => { setResetId(admin.id); setResetPassword(""); setResetPasswordConfirm(""); }} className="h-10 rounded-md font-bold">
+                          <Button variant="outline" size="sm" onClick={() => { setResetId(admin.id); setResetPassword(""); setResetPasswordConfirm(""); }} className="h-11 rounded-md font-bold">
                             <KeyRound className="mr-2 h-4 w-4" aria-hidden="true" />비밀번호 변경
                           </Button>
-                          <Button variant="outline" size="sm" disabled={admin.id === user.id} onClick={() => setDeleteId(admin.id)} className="h-10 rounded-md border-rose-200 font-bold text-rose-700 hover:bg-rose-50 hover:text-rose-800">
+                          <Button variant="outline" size="sm" disabled={admin.id === user.id} onClick={() => setDeleteId(admin.id)} className="h-11 rounded-md border-rose-200 font-bold text-rose-700 hover:bg-rose-50 hover:text-rose-800">
                             <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />삭제
                           </Button>
                         </div>
@@ -307,7 +311,7 @@ export default function Admin() {
         </div>
       </main>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!saving) setCreateOpen(open); }}>
         <DialogContent className="rounded-xl sm:max-w-lg">
           <DialogHeader><DialogTitle className="text-xl font-black">관리자 추가</DialogTitle><DialogDescription>새 관리자는 게시물과 다른 관리자 계정을 관리할 수 있습니다.</DialogDescription></DialogHeader>
           <form onSubmit={(event) => { event.preventDefault(); void createAdmin(); }}>
@@ -322,7 +326,7 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={resetId !== null} onOpenChange={(open) => { if (!open) setResetId(null); }}>
+      <Dialog open={resetId !== null} onOpenChange={(open) => { if (!open && !saving) setResetId(null); }}>
         <DialogContent className="rounded-xl sm:max-w-md">
           <DialogHeader><DialogTitle className="text-xl font-black">관리자 비밀번호 변경</DialogTitle><DialogDescription>새 비밀번호는 10자 이상 입력해 주세요.</DialogDescription></DialogHeader>
           <form onSubmit={(event) => { event.preventDefault(); void updatePassword(); }}>
@@ -333,10 +337,10 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader><AlertDialogTitle>관리자 계정을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>삭제한 계정은 즉시 관리자 기능을 사용할 수 없습니다. 현재 계정과 마지막 활성 관리자는 삭제할 수 없습니다.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel className="rounded-md">취소</AlertDialogCancel><AlertDialogAction onClick={() => void deleteAdmin()} className="rounded-md bg-rose-700 text-white hover:bg-rose-800">삭제</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-md">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deleteAdmin(); }} className="h-11 rounded-md bg-rose-700 text-white hover:bg-rose-800">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

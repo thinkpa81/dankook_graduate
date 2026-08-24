@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import express from "express";
+import session from "express-session";
+import { registerRoutes } from "../server/routes";
 import {
   hashPassword,
   isPasswordHash,
   isSafeHttpUrl,
   rateLimit,
+  requestIdMiddleware,
   requireAuth,
   requireRole,
   requireSameOrigin,
@@ -43,6 +49,42 @@ const testPassword = () => randomBytes(24).toString("base64url");
 const password = testPassword();
 const wrongPassword = testPassword();
 const hash = await hashPassword(password);
+
+const routesSource = await readFile(new URL("../server/routes.ts", import.meta.url), "utf8");
+const publicRoutes = [
+  ["post", "/api/admissions", "publicContentMutationLimiter, asyncHandler"],
+  ["patch", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["delete", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["post", "/api/notices", "publicContentMutationLimiter, asyncHandler"],
+  ["patch", "/api/notices/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["delete", "/api/notices/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["post", "/api/papers", "publicContentMutationLimiter, asyncHandler"],
+  ["patch", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["delete", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
+  ["post", "/api/upload", "uploadLimiter"],
+  ["get", "/uploads/:filename", "downloadLimiter, asyncHandler"],
+] as const;
+const routeSourceLines = routesSource.split(/\r?\n/);
+for (const [method, route, middleware] of publicRoutes) {
+  const declaration = routeSourceLines.find(line => line.includes(`app.${method}("${route}"`));
+  assert.ok(
+    declaration?.includes(middleware),
+    `${method.toUpperCase()} ${route} must remain public and rate-limited`,
+  );
+  assert.equal(declaration.includes("adminOnly"), false);
+}
+for (const [method, route] of [
+  ["post", "/api/papers/:id/comments"],
+  ["patch", "/api/paper-comments/:id"],
+  ["delete", "/api/paper-comments/:id"],
+] as const) {
+  assert.ok(
+    routesSource.includes(`app.${method}("${route}", retiredPaperCommentWrite)`),
+    `${method.toUpperCase()} ${route} must remain retired`,
+  );
+}
+assert.equal(routesSource.includes("storage.getPaperComments"), false);
+assert.equal((routesSource.match(/await ensureBootstrapCode\(\);/g) ?? []).length, 1);
 
 assert.equal(isPasswordHash(hash), true);
 assert.equal(isPasswordHash("scrypt$v1$16384$8$1$invalid$invalid"), false);
@@ -209,5 +251,168 @@ assert.deepEqual(
   (await storage.getAdmissionGuidelines()).map((item) => item.id),
   [sameDateGuideline.id, newestGuideline.id, guideline.id, olderGuideline.id],
 );
+
+const updatedGuideline = await storage.updateAdmissionGuideline(guideline.id, { title: "Updated graduate admission guide" });
+assert.equal(updatedGuideline?.title, "Updated graduate admission guide");
+await storage.deleteAdmissionGuideline(olderGuideline.id);
+assert.equal(await storage.getAdmissionGuideline(olderGuideline.id), undefined);
+
+const notice = await storage.createNotice({
+  title: "Operations notice",
+  content: "Administrator-managed notice content",
+  date: "2026.08.24",
+  views: 0,
+  isImportant: false,
+  files: [],
+});
+assert.equal((await storage.updateNotice(notice.id, { title: "Updated operations notice" }))?.title, "Updated operations notice");
+await storage.deleteNotice(notice.id);
+assert.equal(await storage.getNotice(notice.id), undefined);
+
+const paper = await storage.createPaper({
+  category: "journal",
+  title: "Operations paper",
+  authors: "Dankook Graduate School",
+  firstAuthor: null,
+  correspondingAuthor: null,
+  venue: null,
+  journal: null,
+  volume: null,
+  year: "2026",
+  abstract: null,
+  keywords: [],
+  files: [],
+  websiteUrl: "https://example.edu/paper",
+  date: "2026.08.24",
+  views: 0,
+});
+assert.equal((await storage.updatePaper(paper.id, { title: "Updated operations paper" }))?.title, "Updated operations paper");
+await storage.deletePaper(paper.id);
+assert.equal(await storage.getPaper(paper.id), undefined);
+
+const integrationStorage = new MemoryStorage();
+const integrationApp = express();
+const integrationServer = createServer(integrationApp);
+const integrationNodeEnv = process.env.NODE_ENV;
+const originalConsoleInfo = console.info;
+let integrationAdmissionId: number | null = null;
+let integrationNoticeId: number | null = null;
+let integrationPaperId: number | null = null;
+
+process.env.NODE_ENV = "production";
+console.info = () => {};
+integrationApp.set("trust proxy", 1);
+integrationApp.use(requestIdMiddleware);
+integrationApp.use(express.json({ limit: "256kb" }));
+integrationApp.use(session({
+  secret: randomBytes(32).toString("base64url"),
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: "lax", secure: false },
+}));
+integrationApp.use("/api", requireSameOrigin);
+
+try {
+  await registerRoutes(integrationServer, integrationApp, integrationStorage);
+  await new Promise<void>((resolve, reject) => {
+    integrationServer.once("error", reject);
+    integrationServer.listen(0, "127.0.0.1", resolve);
+  });
+  const address = integrationServer.address();
+  assert.ok(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  async function request(method: string, route: string, body?: unknown, origin = baseUrl) {
+    return await fetch(`${baseUrl}${route}`, {
+      method,
+      headers: {
+        Origin: origin,
+        "Sec-Fetch-Site": origin === baseUrl ? "same-origin" : "cross-site",
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  }
+
+  const admissionCreateResponse = await request("POST", "/api/admissions", {
+    title: "Public admission integration test",
+    content: "Memory-only admission content",
+    organization: "Dankook Graduate School",
+    date: "2026-08-24",
+    attachmentUrl: null,
+    attachmentName: null,
+  });
+  assert.equal(admissionCreateResponse.status, 201);
+  const admission = await admissionCreateResponse.json() as { id: number };
+  integrationAdmissionId = admission.id;
+  assert.equal((await request("PATCH", `/api/admissions/${admission.id}`, { title: "Updated public admission" })).status, 200);
+  assert.equal((await request("DELETE", `/api/admissions/${admission.id}`)).status, 200);
+  assert.equal(await integrationStorage.getAdmissionGuideline(admission.id), undefined);
+
+  const noticeCreateResponse = await request("POST", "/api/notices", {
+    title: "Public notice integration test",
+    content: "Memory-only notice content",
+    date: "2026.08.24",
+    isImportant: false,
+    files: [],
+  });
+  assert.equal(noticeCreateResponse.status, 201);
+  const integrationNotice = await noticeCreateResponse.json() as { id: number };
+  integrationNoticeId = integrationNotice.id;
+  assert.equal((await request("PATCH", `/api/notices/${integrationNotice.id}`, { title: "Updated public notice" })).status, 200);
+  assert.equal((await request("DELETE", `/api/notices/${integrationNotice.id}`)).status, 200);
+  assert.equal(await integrationStorage.getNotice(integrationNotice.id), undefined);
+
+  const paperCreateResponse = await request("POST", "/api/papers", {
+    category: "journal",
+    title: "Public paper integration test",
+    authors: "Dankook Graduate School",
+    firstAuthor: null,
+    correspondingAuthor: null,
+    venue: null,
+    journal: null,
+    volume: null,
+    year: "2026",
+    abstract: null,
+    keywords: [],
+    files: [],
+    websiteUrl: "https://example.edu/public-paper",
+    date: "2026.08.24",
+  });
+  assert.equal(paperCreateResponse.status, 201);
+  const integrationPaper = await paperCreateResponse.json() as { id: number };
+  integrationPaperId = integrationPaper.id;
+  const paperGetResponse = await fetch(`${baseUrl}/api/papers/${integrationPaper.id}`);
+  assert.equal(paperGetResponse.status, 200);
+  assert.equal("comments" in await paperGetResponse.json() as Record<string, unknown>, false);
+  assert.equal((await request("PATCH", `/api/papers/${integrationPaper.id}`, { title: "Updated public paper" })).status, 200);
+
+  assert.equal((await request("POST", `/api/papers/${integrationPaper.id}/comments`, { content: "Retired" })).status, 410);
+  assert.equal((await request("PATCH", "/api/paper-comments/1", { content: "Retired" })).status, 410);
+  assert.equal((await request("DELETE", "/api/paper-comments/1")).status, 410);
+
+  assert.equal((await request("DELETE", `/api/papers/${integrationPaper.id}`)).status, 200);
+  assert.equal(await integrationStorage.getPaper(integrationPaper.id), undefined);
+
+  const rejectedOriginResponse = await request("POST", "/api/admissions", {
+    title: "Rejected cross-origin admission",
+    content: "Must not be stored",
+    organization: "Untrusted",
+    date: "2026-08-24",
+  }, "https://untrusted.example");
+  assert.equal(rejectedOriginResponse.status, 403);
+  assert.equal((await integrationStorage.getAdmissionGuidelines()).length, 0);
+} finally {
+  if (integrationAdmissionId !== null) await integrationStorage.deleteAdmissionGuideline(integrationAdmissionId);
+  if (integrationNoticeId !== null) await integrationStorage.deleteNotice(integrationNoticeId);
+  if (integrationPaperId !== null) await integrationStorage.deletePaper(integrationPaperId);
+  await new Promise<void>((resolve, reject) => {
+    if (!integrationServer.listening) return resolve();
+    integrationServer.close(error => error ? reject(error) : resolve());
+  });
+  console.info = originalConsoleInfo;
+  if (integrationNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = integrationNodeEnv;
+}
 
 console.log("Security smoke checks passed");
