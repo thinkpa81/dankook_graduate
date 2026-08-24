@@ -38,24 +38,24 @@ const coreCourses = [
 ];
 
 const advisorResearchInterests = [
-  "Artificial Intelligence",
+  "Artificial\nIntelligence",
   "Metaverse",
   "Smart City",
   "M&A, PMI",
-  "Interface design for e-business",
-  "Computer-mediated communication",
+  "Interface design\nfor e-business",
+  "Computer-\nmediated\ncommunication",
   "IT management",
   "Design thinking",
-  "CSCL (Computer Supported Collaborative Learning)",
+  "CSCL (Computer Supported\nCollaborative Learning)",
   "MOOC",
 ];
 
 function AdvisorSection() {
   return (
     <section className="bg-gray-50 py-12 lg:py-16" aria-labelledby="advisor-heading">
-      <div className="container mx-auto px-4">
+      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
         <div
-          className="mx-auto mb-8 grid max-w-[1200px] items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]"
+          className="mx-auto mb-8 space-y-6"
           data-testid="advisor-layout"
         >
           <Card
@@ -63,54 +63,56 @@ function AdvisorSection() {
             data-testid="advisor-profile"
           >
             <CardContent className="p-0">
-              <div className="grid min-w-0 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]">
-                <div className="min-w-0 bg-[#F3F8FF] p-6 sm:p-8 lg:p-6 xl:p-7">
-                  <h2 id="advisor-heading">
-                    <span className="block text-sm font-bold tracking-[0.08em] text-[#2156D9]">지도교수</span>
-                    <span className="mt-1 block text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl lg:text-2xl xl:text-3xl">
-                      서응교 교수
-                    </span>
-                  </h2>
-
+              <div className="grid min-w-0 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:min-h-[840px] xl:grid-cols-[336px_minmax(0,1fr)]">
+                <div className="flex min-h-[300px] min-w-0 items-start justify-center bg-[#F3F8FF] px-6 pb-10 pt-12 md:min-h-full md:pt-24 lg:pt-28 xl:pt-[136px]">
                   <img
                     src="/portrait_transparent.png"
                     alt="서응교 지도교수"
-                    className="mx-auto mt-8 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48 lg:h-40 lg:w-40 xl:h-44 xl:w-44"
+                    className="h-auto w-[210px] max-w-full object-contain"
                     width="210"
                     height="196"
                     loading="eager"
                     decoding="async"
                     data-testid="advisor-portrait"
                   />
+                </div>
 
-                  <div className="mt-7 flex min-w-0 items-start gap-2.5 text-[15px] leading-6 text-slate-700 lg:text-sm xl:text-[15px]">
-                    <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                <div className="min-w-0 bg-white p-6 sm:p-8 lg:px-10 lg:py-9 xl:px-12 xl:py-10">
+                  <h2 id="advisor-heading">
+                    <span className="block text-base font-bold tracking-[0.04em] text-[#2156D9]">지도교수</span>
+                    <span className="mt-2 block text-3xl font-black tracking-[-0.03em] text-slate-950 xl:text-4xl">
+                      서응교 교수
+                    </span>
+                  </h2>
+
+                  <div className="mt-7 flex min-w-0 items-start gap-3 text-base leading-7 text-slate-700">
+                    <Building className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
                     <div className="min-w-0">
                       <p>단국대학교 대학원 데이터지식서비스공학과</p>
-                      <p className="mt-3 text-sm font-semibold leading-6 text-[#2156D9]">
+                      <p className="mt-2 font-semibold leading-7 text-[#2156D9]">
                         AIMS Lab(에임즈 랩): AI, Innovation, Metaverse &amp; Service Lab
                       </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="min-w-0 bg-white p-6 sm:p-8 lg:p-6 xl:p-8">
-                  <p className="text-sm font-bold tracking-[0.08em] text-[#2156D9]">RESEARCH INTERESTS</p>
-                  <h3 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">연구관심분야</h3>
-                  <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="서응교 교수 연구관심분야">
+                  <div className="mt-9 border-t border-slate-200 pt-8">
+                    <h3 className="text-xl font-extrabold tracking-[-0.02em] text-slate-950">연구관심분야</h3>
+                  </div>
+                  <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
                     {advisorResearchInterests.map((interest, index) => (
                       <li
                         key={interest}
-                        className={`flex min-w-0 break-words items-center rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 text-sm font-semibold leading-snug text-slate-700 ${
+                        className={`flex min-w-0 whitespace-pre-line break-words items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-4 text-sm font-semibold leading-snug text-slate-700 [overflow-wrap:anywhere] ${
                           index >= 8
-                            ? "min-h-[96px] xl:col-span-2 xl:min-h-[112px] xl:justify-center xl:px-5 xl:text-center xl:text-base xl:font-bold"
-                            : "min-h-[72px] lg:min-h-[88px]"
+                            ? "min-h-[96px] lg:col-span-2 lg:min-h-[108px] lg:justify-center lg:px-5 lg:text-center lg:text-base lg:font-bold"
+                            : "min-h-[80px] lg:min-h-[96px] lg:text-base"
                         }`}
                       >
                         {interest}
                       </li>
                     ))}
                   </ul>
+                  <div className="mt-16 border-t border-slate-200" aria-hidden="true" />
                 </div>
               </div>
             </CardContent>
