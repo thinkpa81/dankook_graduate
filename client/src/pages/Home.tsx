@@ -19,7 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import { api, type Notice } from "@/lib/api";
 
 const resources = [
@@ -110,7 +109,6 @@ const previewNotices: Notice[] = [
 ];
 
 export default function Home() {
-  const [loginOpen, setLoginOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>(previewNotices);
 
   useEffect(() => {
@@ -120,7 +118,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <main>
         <section className="relative isolate min-h-[440px] overflow-hidden lg:min-h-[460px]" aria-labelledby="hero-title">
@@ -291,7 +289,6 @@ export default function Home() {
       </main>
 
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

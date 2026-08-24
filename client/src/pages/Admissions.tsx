@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CalendarDays, Download, ExternalLink, Eye, FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api, type AdmissionGuideline } from "@/lib/api";
-import { useSession } from "@/hooks/use-session";
 
 type GuidelineForm = {
   title: string;
@@ -102,7 +100,6 @@ const previewGuidelines: AdmissionGuideline[] = [
 ];
 
 export default function Admissions() {
-  const [loginOpen, setLoginOpen] = useState(false);
   const [guidelines, setGuidelines] = useState<AdmissionGuideline[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,8 +114,6 @@ export default function Admissions() {
   const [editing, setEditing] = useState<AdmissionGuideline | null>(null);
   const [viewing, setViewing] = useState<AdmissionGuideline | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const { user } = useSession();
-  const isAdmin = user?.role === "ADMIN";
 
   const loadGuidelines = async () => {
     setError(null);
@@ -249,7 +244,7 @@ export default function Admissions() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-clip bg-slate-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="ADMISSIONS"
@@ -281,11 +276,9 @@ export default function Admissions() {
                   모집요강
                 </h2>
               </div>
-              {isAdmin && (
-                <Button onClick={openCreate} className="h-11 rounded-md bg-[#2156D9] px-5 font-bold hover:bg-[#1848bc]" data-testid="button-add-admission">
-                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />모집요강 등록
-                </Button>
-              )}
+              <Button onClick={openCreate} className="h-11 rounded-md bg-[#2156D9] px-5 font-bold hover:bg-[#1848bc]" data-testid="button-add-admission">
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" />모집요강 등록
+              </Button>
             </div>
 
             <div className="my-6 flex justify-end">
@@ -387,16 +380,12 @@ export default function Admissions() {
                         <Download className="h-5 w-5" aria-hidden="true" />
                       </Button>
                     )}
-                    {isAdmin && (
-                      <>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(item)} className="h-11 w-11 rounded-md" aria-label={`${item.title} 수정`}>
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="h-11 w-11 rounded-md text-rose-700 hover:bg-rose-50 hover:text-rose-800" aria-label={`${item.title} 삭제`}>
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </>
-                    )}
+                    <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(item)} className="h-11 w-11 rounded-md" aria-label={`${item.title} 수정`}>
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="h-11 w-11 rounded-md text-rose-700 hover:bg-rose-50 hover:text-rose-800" aria-label={`${item.title} 삭제`}>
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
                   </div>
                 </article>
               ))}
@@ -486,7 +475,6 @@ export default function Admissions() {
       </AlertDialog>
 
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

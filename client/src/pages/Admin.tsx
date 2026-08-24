@@ -183,7 +183,7 @@ export default function Admin() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <main className="flex-1 py-12 lg:py-16">
         <div className="mx-auto max-w-[1100px] px-5 sm:px-8 lg:px-10">

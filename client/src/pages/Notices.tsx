@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare, Send } from "lucide-react";
+import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,10 +27,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
-import { api, Notice, NoticeComment } from "@/lib/api";
-import { useSession } from "@/hooks/use-session";
+import { api, Notice } from "@/lib/api";
 
 interface FileAttachment {
   name: string;
@@ -45,7 +43,6 @@ const MAX_NOTICE_FILES = 5;
 const MAX_NOTICE_FILE_BYTES = 10 * 1024 * 1024;
 
 export default function Notices() {
-  const [loginOpen, setLoginOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,18 +56,12 @@ export default function Notices() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
-  const [newComment, setNewComment] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
-  const [editingCommentContent, setEditingCommentContent] = useState("");
-  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     isImportant: false,
     files: [] as FileAttachment[],
   });
-  const { user: sessionUser } = useSession();
-  const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadNotices = async () => {
     setError(null);
@@ -170,7 +161,6 @@ export default function Notices() {
         title: formData.title,
         content: formData.content,
         date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
-        views: 0,
         isImportant: formData.isImportant,
         files: allFileUrls,
       });
@@ -270,64 +260,9 @@ export default function Notices() {
     setIsAddOpen(true);
   };
 
-  const addComment = async () => {
-    if (!viewingNotice || !newComment.trim()) return;
-    if (!sessionUser) {
-      setLoginOpen(true);
-      return;
-    }
-    try {
-      const comment = await api.notices.addComment(viewingNotice.id, {
-        content: newComment,
-      });
-      const updated = { ...viewingNotice, comments: [...viewingNotice.comments, comment] };
-      setViewingNotice(updated);
-      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
-      setNewComment("");
-    } catch (e) {
-      console.error("Failed to add comment", e);
-    }
-  };
-
-  const startEditComment = (comment: NoticeComment) => {
-    setEditingCommentId(comment.id);
-    setEditingCommentContent(comment.content);
-  };
-
-  const saveEditComment = async () => {
-    if (!viewingNotice || !editingCommentId) return;
-    try {
-      await api.notices.updateComment(editingCommentId, editingCommentContent);
-      const updatedComments = viewingNotice.comments.map(c => 
-        c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
-      );
-      const updated = { ...viewingNotice, comments: updatedComments };
-      setViewingNotice(updated);
-      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
-      setEditingCommentId(null);
-      setEditingCommentContent("");
-    } catch (e) {
-      console.error("Failed to update comment", e);
-    }
-  };
-
-  const deleteComment = async () => {
-    if (!viewingNotice || !deleteCommentId) return;
-    try {
-      await api.notices.deleteComment(deleteCommentId);
-      const updatedComments = viewingNotice.comments.filter(c => c.id !== deleteCommentId);
-      const updated = { ...viewingNotice, comments: updatedComments };
-      setViewingNotice(updated);
-      setNotices(prev => prev.map(n => n.id === viewingNotice.id ? updated : n));
-      setDeleteCommentId(null);
-    } catch (e) {
-      console.error("Failed to delete comment", e);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="NOTICES"
@@ -351,12 +286,10 @@ export default function Notices() {
                 data-testid="input-search"
               />
             </div>
-            {isAdmin && (
-              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
-                <Plus className="w-5 h-5 mr-2" />
-                공지 등록
-              </Button>
-            )}
+            <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
+              <Plus className="w-5 h-5 mr-2" />
+              공지 등록
+            </Button>
           </div>
 
           <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
@@ -366,7 +299,7 @@ export default function Notices() {
               <div className="col-span-2 text-center">작성일</div>
               <div className="col-span-1 text-center">조회수</div>
               <div className="col-span-1 text-center">첨부</div>
-              <div className="col-span-1 text-center">{isAdmin ? "관리" : ""}</div>
+              <div className="col-span-1 text-center">관리</div>
             </div>
             
             <CardContent className="p-0 bg-white">
@@ -386,7 +319,7 @@ export default function Notices() {
                   <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500"><Eye className="w-4 h-4 mr-1.5 md:hidden" />{notice.views}</div>
                   <div className="hidden md:flex col-span-1 items-center justify-center gap-1">{notice.files.length > 0 && <span className="flex items-center gap-1 text-xs text-gray-500"><FileText className="w-4 h-4 text-primary" />{notice.files.length}</span>}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
-                    {isAdmin && <><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100" onClick={() => openEdit(notice)} aria-label={`${notice.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100" onClick={() => setDeleteId(notice.id)} aria-label={`${notice.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></>}
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(notice)} aria-label={`${notice.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(notice.id)} aria-label={`${notice.title} 삭제`}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               )})}
@@ -436,12 +369,10 @@ export default function Notices() {
                           <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
                           <span className="text-sm font-medium text-gray-700">{displayName}</span>
                         </div>
-                        {downloadUrl && sessionUser ? (
+                        {downloadUrl ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors">
                             <Download className="w-4 h-4" />다운로드
                           </a>
-                        ) : downloadUrl ? (
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className="text-primary">로그인 후 다운로드</Button>
                         ) : (
                           <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
@@ -455,35 +386,13 @@ export default function Notices() {
               <Label className="font-bold flex items-center gap-2 mb-4 text-base"><MessageSquare className="w-4 h-4" />댓글 ({viewingNotice?.comments.length || 0})</Label>
               {viewingNotice?.comments.map((comment) => (
                 <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
-                  {editingCommentId === comment.id ? (
-                    <div className="space-y-2">
-                      <Input value={editingCommentContent} onChange={(e) => setEditingCommentContent(e.target.value)} className="h-10 rounded-lg" />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={saveEditComment} className="rounded-lg">저장</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)} className="rounded-lg">취소</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-sm">{comment.author}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">{comment.date}</span>
-                          {comment.canEdit && <><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button></>}
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600">{comment.content}</p>
-                    </>
-                  )}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm">{comment.author}</span>
+                    <span className="text-xs text-gray-400">{comment.date}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{comment.content}</p>
                 </div>
               ))}
-              {sessionUser ? <div className="space-y-2 mt-4">
-                <p className="text-sm text-gray-500">{sessionUser.username} 계정으로 댓글이 등록됩니다.</p>
-                <div className="flex gap-2">
-                  <Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" />
-                  <Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button>
-                </div>
-              </div> : <Button type="button" variant="outline" onClick={() => setLoginOpen(true)} className="mt-4">로그인 후 댓글 작성</Button>}
             </div>
           </div>
         </DialogContent>
@@ -604,21 +513,7 @@ export default function Notices() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteCommentId !== null} onOpenChange={() => setDeleteCommentId(null)}>
-        <AlertDialogContent className="rounded-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>댓글을 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteComment} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

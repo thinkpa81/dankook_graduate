@@ -10,7 +10,6 @@ import Notices from "@/pages/Notices";
 import Papers from "@/pages/Papers";
 import Regulations from "@/pages/Regulations";
 import Admissions from "@/pages/Admissions";
-import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,7 +26,7 @@ function Router() {
       <Route path="/admissions/guidelines" component={Admissions} />
       <Route path="/talent-pool"><Redirect to="/admissions/guidelines" /></Route>
       <Route path="/privacy"><Redirect to="/" /></Route>
-      <Route path="/admin" component={Admin} />
+      <Route path="/admin"><Redirect to="/admissions/guidelines" /></Route>
       <Route component={NotFound} />
     </Switch>
   );

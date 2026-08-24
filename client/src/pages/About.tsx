@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { GraduationCap, Award, ExternalLink, Database, Globe, Building } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
 import DoctoralContactGuide from "@/components/DoctoralContactGuide";
 
@@ -56,55 +54,57 @@ function AdvisorSection() {
   return (
     <section className="bg-gray-50 py-12 lg:py-16" aria-labelledby="advisor-heading">
       <div className="container mx-auto px-4">
-        <Card
-          className="mx-auto mb-8 max-w-6xl overflow-hidden rounded-xl border border-slate-200 shadow-lg"
-          data-testid="advisor-profile"
+        <div
+          className="mx-auto mb-8 grid max-w-[1200px] items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]"
+          data-testid="advisor-layout"
         >
-          <CardContent className="p-0">
-            <div className="grid lg:grid-cols-[276px_minmax(0,1fr)]">
-              <div className="min-w-0 bg-[#F3F8FF] p-6 sm:p-8 lg:p-7">
-                <h2 id="advisor-heading">
-                  <span className="block text-sm font-bold tracking-[0.08em] text-[#2156D9]">지도교수</span>
-                  <span className="mt-1 block text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">
-                    서응교 교수
-                  </span>
-                </h2>
+          <Card
+            className="min-w-0 overflow-hidden rounded-xl border border-slate-200 shadow-lg"
+            data-testid="advisor-profile"
+          >
+            <CardContent className="p-0">
+              <div className="grid min-w-0 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]">
+                <div className="min-w-0 bg-[#F3F8FF] p-6 sm:p-8 lg:p-6 xl:p-7">
+                  <h2 id="advisor-heading">
+                    <span className="block text-sm font-bold tracking-[0.08em] text-[#2156D9]">지도교수</span>
+                    <span className="mt-1 block text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl lg:text-2xl xl:text-3xl">
+                      서응교 교수
+                    </span>
+                  </h2>
 
-                <img
-                  src="/portrait_transparent.png"
-                  alt="서응교 지도교수"
-                  className="mx-auto mt-8 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48"
-                  width="210"
-                  height="196"
-                  loading="eager"
-                  decoding="async"
-                  data-testid="advisor-portrait"
-                />
+                  <img
+                    src="/portrait_transparent.png"
+                    alt="서응교 지도교수"
+                    className="mx-auto mt-8 h-44 w-44 rounded-full object-contain sm:h-48 sm:w-48 lg:h-40 lg:w-40 xl:h-44 xl:w-44"
+                    width="210"
+                    height="196"
+                    loading="eager"
+                    decoding="async"
+                    data-testid="advisor-portrait"
+                  />
 
-                <div className="mt-7 flex min-w-0 items-start gap-2.5 text-[15px] leading-6 text-slate-700">
-                  <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <p>단국대학교 대학원 데이터지식서비스공학과</p>
-                    <p className="mt-3 text-sm font-semibold leading-6 text-[#2156D9]">
-                      AIMS Lab(에임즈 랩): AI, Innovation, Metaverse &amp; Service Lab
-                    </p>
+                  <div className="mt-7 flex min-w-0 items-start gap-2.5 text-[15px] leading-6 text-slate-700 lg:text-sm xl:text-[15px]">
+                    <Building className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p>단국대학교 대학원 데이터지식서비스공학과</p>
+                      <p className="mt-3 text-sm font-semibold leading-6 text-[#2156D9]">
+                        AIMS Lab(에임즈 랩): AI, Innovation, Metaverse &amp; Service Lab
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-              </div>
-
-              <div className="min-w-0 bg-white p-6 sm:p-8 lg:p-10">
-                <div>
+                <div className="min-w-0 bg-white p-6 sm:p-8 lg:p-6 xl:p-8">
                   <p className="text-sm font-bold tracking-[0.08em] text-[#2156D9]">RESEARCH INTERESTS</p>
                   <h3 className="mt-1 text-2xl font-black tracking-[-0.03em] text-slate-950">연구관심분야</h3>
-                  <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4" aria-label="서응교 교수 연구관심분야">
+                  <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="서응교 교수 연구관심분야">
                     {advisorResearchInterests.map((interest, index) => (
                       <li
                         key={interest}
-                        className={`flex min-h-[72px] items-center rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold leading-snug text-slate-700 ${
+                        className={`flex min-w-0 break-words items-center rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 text-sm font-semibold leading-snug text-slate-700 ${
                           index >= 8
-                            ? "lg:col-span-2 lg:min-h-[112px] lg:justify-center lg:px-8 lg:text-center lg:text-base lg:font-bold"
-                            : "lg:min-h-[78px]"
+                            ? "min-h-[96px] xl:col-span-2 xl:min-h-[112px] xl:justify-center xl:px-5 xl:text-center xl:text-base xl:font-bold"
+                            : "min-h-[72px] lg:min-h-[88px]"
                         }`}
                       >
                         {interest}
@@ -112,12 +112,12 @@ function AdvisorSection() {
                     ))}
                   </ul>
                 </div>
-
-                <DoctoralContactGuide />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <DoctoralContactGuide />
+        </div>
 
         <div className="text-center">
           <Button
@@ -141,11 +141,9 @@ function AdvisorSection() {
 }
 
 export default function About() {
-  const [loginOpen, setLoginOpen] = useState(false);
-
   return (
     <div className="min-h-screen overflow-x-clip flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="DEPARTMENT INTRODUCTION"
@@ -359,7 +357,6 @@ export default function About() {
       </section>
 
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

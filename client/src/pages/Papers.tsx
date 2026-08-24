@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
-import { Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Download, MessageSquare, Send, Eye } from "lucide-react";
+import { Users, FileText, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ExternalLink, Download, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginModal from "@/components/LoginModal";
 import PageHero from "@/components/PageHero";
-import { api, Paper, PaperComment } from "@/lib/api";
+import { api, Paper } from "@/lib/api";
 import { toast } from "sonner";
-import { useSession } from "@/hooks/use-session";
 
 type CategoryKey = "conference" | "journal";
 
@@ -44,6 +42,7 @@ const normalizeCategory = (value?: string | null): CategoryKey =>
   value?.includes("journal") ? "journal" : "conference";
 
 const isValidWebsiteUrl = (value: string) => {
+  if (!value) return true;
   try {
     const url = new URL(value);
     return url.protocol === "http:" || url.protocol === "https:";
@@ -58,7 +57,6 @@ export default function Papers() {
   const params = useParams<{ category?: string }>();
   const category = normalizeCategory(params.category);
 
-  const [loginOpen, setLoginOpen] = useState(false);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,17 +69,11 @@ export default function Papers() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
   const [viewingPaper, setViewingPaper] = useState<Paper | null>(null);
-  const [newComment, setNewComment] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
-  const [editingCommentContent, setEditingCommentContent] = useState("");
-  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     authors: "",
     websiteUrl: "",
   });
-  const { user: sessionUser } = useSession();
-  const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadPapers = async () => {
     try {
@@ -165,9 +157,8 @@ export default function Papers() {
         abstract: null,
         keywords: [],
         files: [],
-        websiteUrl: formData.websiteUrl.trim(),
+        websiteUrl: formData.websiteUrl.trim() || null,
         date: new Date().toISOString().split('T')[0].replace(/-/g, '.'),
-        views: 0,
       });
       await loadPapers();
       setIsAddOpen(false);
@@ -199,7 +190,7 @@ export default function Papers() {
       await api.papers.update(editingPaper.id, {
         title: formData.title.trim(),
         authors: formData.authors.trim(),
-        websiteUrl: formData.websiteUrl.trim(),
+        websiteUrl: formData.websiteUrl.trim() || null,
       });
       await loadPapers();
       setIsEditOpen(false);
@@ -228,64 +219,9 @@ export default function Papers() {
     }
   };
 
-  const addComment = async () => {
-    if (!viewingPaper || !newComment.trim()) return;
-    if (!sessionUser) {
-      setLoginOpen(true);
-      return;
-    }
-    try {
-      const comment = await api.papers.addComment(viewingPaper.id, {
-        content: newComment,
-      });
-      const updated = { ...viewingPaper, comments: [...viewingPaper.comments, comment] };
-      setViewingPaper(updated);
-      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
-      setNewComment("");
-    } catch (e) {
-      console.error("Failed to add comment", e);
-    }
-  };
-
-  const startEditComment = (comment: PaperComment) => {
-    setEditingCommentId(comment.id);
-    setEditingCommentContent(comment.content);
-  };
-
-  const saveEditComment = async () => {
-    if (!viewingPaper || !editingCommentId) return;
-    try {
-      await api.papers.updateComment(editingCommentId, editingCommentContent);
-      const updatedComments = viewingPaper.comments.map(c => 
-        c.id === editingCommentId ? { ...c, content: editingCommentContent } : c
-      );
-      const updated = { ...viewingPaper, comments: updatedComments };
-      setViewingPaper(updated);
-      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
-      setEditingCommentId(null);
-      setEditingCommentContent("");
-    } catch (e) {
-      console.error("Failed to update comment", e);
-    }
-  };
-
-  const deleteComment = async () => {
-    if (!viewingPaper || !deleteCommentId) return;
-    try {
-      await api.papers.deleteComment(deleteCommentId);
-      const updatedComments = viewingPaper.comments.filter(c => c.id !== deleteCommentId);
-      const updated = { ...viewingPaper, comments: updatedComments };
-      setViewingPaper(updated);
-      setPapers(prev => prev.map(p => p.id === viewingPaper.id ? updated : p));
-      setDeleteCommentId(null);
-    } catch (e) {
-      console.error("Failed to delete comment", e);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header onLoginClick={() => setLoginOpen(true)} />
+      <Header />
 
       <PageHero
         eyebrow="PAPERS"
@@ -312,7 +248,7 @@ export default function Papers() {
               <Button variant="outline" onClick={() => { setShowAll(!showAll); setCurrentPage(1); }} className="rounded-lg font-semibold px-4 h-11">
                 <Eye className="w-4 h-4 mr-2" />{showAll ? "페이지별 보기" : "전체보기"}
               </Button>
-              {isAdmin && <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11"><Plus className="w-4 h-4 mr-2" />등록</Button>}
+              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11"><Plus className="w-4 h-4 mr-2" />등록</Button>
             </div>
           </div>
 
@@ -336,7 +272,6 @@ export default function Papers() {
                               {paper.title}
                             </button>
                           </h3>
-                          {paper.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1 mt-1"><MessageSquare className="w-3 h-3" />{paper.comments.length}</span>}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-base text-gray-600 mb-2">
                           <span className="flex items-center gap-1.5"><Users className="w-4 h-4" />{paper.authors}</span>
@@ -352,7 +287,7 @@ export default function Papers() {
                           <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
-                      {isAdmin && <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>}
+                      <div className="flex items-center gap-1"><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -375,7 +310,7 @@ export default function Papers() {
         <DialogContent className="sm:max-w-2xl rounded-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold pr-8">{viewingPaper?.title}</DialogTitle>
-            <DialogDescription>논문 정보와 등록된 의견을 확인합니다.</DialogDescription>
+            <DialogDescription>논문 상세 정보를 확인합니다.</DialogDescription>
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 pt-2">
               <span className="flex items-center gap-1"><Users className="w-4 h-4" />{viewingPaper?.authors}</span>
               <Badge variant="secondary" className="gap-1 border border-slate-200 bg-slate-100 font-semibold text-slate-600"><Eye className="h-3.5 w-3.5" />조회수 {viewingPaper?.views ?? 0}</Badge>
@@ -399,10 +334,8 @@ export default function Papers() {
                     return (
                       <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
                         <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-slate-500" aria-hidden="true" /><span className="text-sm font-medium text-gray-700">{displayName}</span></div>
-                        {downloadUrl && sessionUser ? (
+                        {downloadUrl ? (
                           <a href={downloadUrl} download={displayName} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-blue-100 rounded-lg transition-colors"><Download className="w-4 h-4" />다운로드</a>
-                        ) : downloadUrl ? (
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setLoginOpen(true)} className="text-primary">로그인 후 다운로드</Button>
                         ) : (
                           <span className="text-sm text-orange-500">재업로드 필요</span>
                         )}
@@ -412,31 +345,6 @@ export default function Papers() {
                 </div>
               </div>
             )}
-            <div className="border-t pt-6">
-              <Label className="font-bold flex items-center gap-2 mb-4 text-base"><MessageSquare className="w-4 h-4" />댓글 ({viewingPaper?.comments.length || 0})</Label>
-              {viewingPaper?.comments.map((comment) => (
-                <div key={comment.id} className="p-3 bg-gray-50 rounded-lg mb-2">
-                  {editingCommentId === comment.id ? (
-                    <div className="space-y-2">
-                      <Input value={editingCommentContent} onChange={(e) => setEditingCommentContent(e.target.value)} className="h-10 rounded-lg" />
-                      <div className="flex gap-2"><Button size="sm" onClick={saveEditComment} className="rounded-lg">저장</Button><Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)} className="rounded-lg">취소</Button></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-sm">{comment.author}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">{comment.date}</span>
-                          {comment.canEdit && <><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditComment(comment)}><Pencil className="w-3 h-3" /></Button><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteCommentId(comment.id)}><Trash2 className="w-3 h-3" /></Button></>}
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600">{comment.content}</p>
-                    </>
-                  )}
-                </div>
-              ))}
-              {sessionUser ? <div className="space-y-2 mt-4"><p className="text-sm text-gray-500">{sessionUser.username} 계정으로 댓글이 등록됩니다.</p><div className="flex gap-2"><Input placeholder="댓글을 입력하세요..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="h-11 rounded-lg text-base" /><Button onClick={addComment} className="rounded-lg px-4 h-11"><Send className="w-4 h-4" /></Button></div></div> : <Button type="button" variant="outline" onClick={() => setLoginOpen(true)} className="mt-4">로그인 후 댓글 작성</Button>}
-            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -457,7 +365,7 @@ export default function Papers() {
               <Input id="paper-authors" placeholder="저자를 입력하세요" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paper-website" className="font-bold">사이트 주소</Label>
+              <Label htmlFor="paper-website" className="font-bold">사이트 주소 (선택)</Label>
               <Input id="paper-website" type="url" inputMode="url" placeholder="https://example.com" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" />
             </div>
             <div className="flex gap-3 pt-3">
@@ -474,7 +382,7 @@ export default function Papers() {
           <form className="mt-4 space-y-5" onSubmit={(event) => { event.preventDefault(); void handleEdit(); }}>
             <div className="space-y-2"><Label htmlFor="edit-paper-title" className="font-bold">논문 제목</Label><Input id="edit-paper-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="h-12 rounded-lg text-base" /></div>
             <div className="space-y-2"><Label htmlFor="edit-paper-authors" className="font-bold">저자</Label><Input id="edit-paper-authors" value={formData.authors} onChange={(e) => setFormData({ ...formData, authors: e.target.value })} className="h-12 rounded-lg text-base" /></div>
-            <div className="space-y-2"><Label htmlFor="edit-paper-website" className="font-bold">사이트 주소</Label><Input id="edit-paper-website" type="url" inputMode="url" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" /></div>
+            <div className="space-y-2"><Label htmlFor="edit-paper-website" className="font-bold">사이트 주소 (선택)</Label><Input id="edit-paper-website" type="url" inputMode="url" value={formData.websiteUrl} onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })} className="h-12 rounded-lg text-base" /></div>
             <div className="flex gap-3 pt-3"><Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving} className="h-12 flex-1 rounded-lg text-base">취소</Button><Button type="submit" disabled={saving} className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary to-blue-600 text-base font-bold">{saving ? "수정 중..." : "수정"}</Button></div>
           </form>
         </DialogContent>
@@ -484,12 +392,7 @@ export default function Papers() {
         <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>논문을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-lg">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void handleDelete(); }} className="h-11 rounded-lg bg-destructive text-destructive-foreground">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteCommentId !== null} onOpenChange={() => setDeleteCommentId(null)}>
-        <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>댓글을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>삭제한 댓글은 복구할 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-lg">취소</AlertDialogCancel><AlertDialogAction onClick={deleteComment} className="bg-destructive text-destructive-foreground rounded-lg">삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-      </AlertDialog>
-
       <Footer />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }
