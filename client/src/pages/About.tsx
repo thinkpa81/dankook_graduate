@@ -63,7 +63,7 @@ function AdvisorSection() {
             data-testid="advisor-profile"
           >
             <CardContent className="p-0">
-              <div className="grid min-w-0 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:min-h-[840px] xl:grid-cols-[336px_minmax(0,1fr)]">
+              <div className="grid min-w-0 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[336px_minmax(0,1fr)]">
                 <div className="flex min-h-[300px] min-w-0 items-start justify-center bg-[#F3F8FF] px-6 pb-10 pt-12 md:min-h-full md:pt-24 lg:pt-28 xl:pt-[136px]">
                   <img
                     src="/portrait_transparent.png"
