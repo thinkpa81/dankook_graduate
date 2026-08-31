@@ -141,13 +141,13 @@ export default function Home() {
                 <span className="h-px w-9 bg-amber-400" aria-hidden="true" />
                 DATA SCIENCE
               </p>
-              <h1 id="hero-title" className="max-w-[680px] text-[2.45rem] font-black leading-[1.2] tracking-[-0.045em] text-white sm:text-5xl lg:text-[3.15rem]">
+              <h1 id="hero-title" className="max-w-[680px] text-[37px] font-black leading-[1.2] tracking-[-0.045em] text-white sm:text-5xl lg:text-[3.15rem]">
                 데이터로 지식을 만들고,
                 <br />
                 미래를 설계합니다
               </h1>
               <p className="mt-6 max-w-[640px] text-base font-normal leading-7 text-slate-100 sm:text-lg sm:leading-8">
-                컴퓨터학·통계학·경영학을 연결하는 융합형 데이터 전문가를 양성합니다.
+                직장인을 위한 토요일 전일 수업
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-13 rounded-md bg-[#2156D9] px-7 text-base font-bold text-white shadow-[0_12px_28px_rgba(0,35,91,0.28)] hover:bg-[#1848bc]" data-testid="button-intro">
