@@ -141,13 +141,13 @@ export default function Home() {
                 <span className="h-px w-9 bg-amber-400" aria-hidden="true" />
                 DATA SCIENCE
               </p>
-              <h1 id="hero-title" className="max-w-[680px] text-[35px] font-black leading-[1.2] tracking-[-0.045em] text-white sm:text-5xl lg:text-[3.15rem]">
-                데이터로 지식을 만들고,
-                <br />
-                미래를 설계합니다
+              <h1 id="hero-title" className="max-w-[680px] text-[clamp(31px,9.7vw,35px)] font-black leading-[1.2] tracking-[-0.055em] text-white sm:text-5xl sm:tracking-[-0.045em] lg:text-[3.15rem]">
+                <span className="block whitespace-nowrap">데이터로 지식을 만들고,</span>
+                <span className="block">미래를 설계합니다</span>
               </h1>
-              <p className="mt-6 inline-flex max-w-full items-center rounded-md border border-white/70 border-l-4 border-l-[#F4A000] bg-white/95 px-4 py-2.5 text-[15px] font-extrabold leading-6 tracking-[-0.01em] text-[#0B2B50] shadow-[0_10px_24px_rgba(3,20,41,0.22)] backdrop-blur-sm sm:text-lg sm:leading-7">
-                직장인을 위한 토요일 전일 수업
+              <p className="mt-5 max-w-full text-[16px] font-bold leading-6 tracking-[-0.015em] text-white drop-shadow-[0_2px_6px_rgba(3,20,41,0.85)] sm:mt-6 sm:text-lg sm:leading-7">
+                직장인을 위한{" "}
+                <strong className="font-black text-[#F4A000]">토요일 전일 수업</strong>
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-13 rounded-md bg-[#2156D9] px-7 text-base font-bold text-white shadow-[0_12px_28px_rgba(0,35,91,0.28)] hover:bg-[#1848bc]" data-testid="button-intro">
