@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,6 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
-  const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,6 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
     if (!nextOpen) {
       setLoginData({ username: "", password: "" });
       setError("");
-      setShowPassword(false);
     }
     onOpenChange(nextOpen);
   };
@@ -50,7 +48,6 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
       }
       notifyAuthChanged();
       setLoginData({ username: "", password: "" });
-      setShowPassword(false);
       onOpenChange(false);
     } catch {
       setError("아이디 또는 비밀번호를 확인해주세요.");
@@ -93,28 +90,16 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="admin-password" className="font-bold">비밀번호</Label>
-            <div className="relative">
-              <Input
-                id="admin-password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="비밀번호"
-                value={loginData.password}
-                onChange={(event) => setLoginData({ ...loginData, password: event.target.value })}
-                className="h-11 rounded-lg pr-11 text-base"
-                data-testid="input-login-password"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
+            <Input
+              id="admin-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="비밀번호"
+              value={loginData.password}
+              onChange={(event) => setLoginData({ ...loginData, password: event.target.value })}
+              className="h-11 rounded-lg text-base"
+              data-testid="input-login-password"
+            />
           </div>
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
           <Button

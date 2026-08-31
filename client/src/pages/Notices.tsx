@@ -29,6 +29,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
 import { api, Notice } from "@/lib/api";
+import { useSession } from "@/hooks/use-session";
 
 interface FileAttachment {
   name: string;
@@ -62,6 +63,8 @@ export default function Notices() {
     isImportant: false,
     files: [] as FileAttachment[],
   });
+  const { user: sessionUser } = useSession();
+  const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadNotices = async () => {
     setError(null);
@@ -286,20 +289,22 @@ export default function Notices() {
                 data-testid="input-search"
               />
             </div>
-            <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
-              <Plus className="w-5 h-5 mr-2" />
-              공지 등록
-            </Button>
+            {isAdmin && (
+              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-12 text-base" data-testid="button-add-notice">
+                <Plus className="w-5 h-5 mr-2" />
+                공지 등록
+              </Button>
+            )}
           </div>
 
           <Card className="border-0 shadow-lg overflow-hidden rounded-xl">
             <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 font-bold text-sm text-gray-600 border-b">
               <div className="col-span-1 text-center">번호</div>
-              <div className="col-span-6">제목</div>
+              <div className={isAdmin ? "col-span-6" : "col-span-7"}>제목</div>
               <div className="col-span-2 text-center">작성일</div>
               <div className="col-span-1 text-center">조회수</div>
               <div className="col-span-1 text-center">첨부</div>
-              <div className="col-span-1 text-center">관리</div>
+              {isAdmin && <div className="col-span-1 text-center">관리</div>}
             </div>
             
             <CardContent className="p-0 bg-white">
@@ -310,7 +315,7 @@ export default function Notices() {
                 return (
                 <div key={notice.id} className={`grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 p-4 hover:bg-blue-50/50 transition-colors group ${index !== paginatedNotices.length - 1 ? 'border-b border-gray-100' : ''}`}>
                   <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{displayNumber}</div>
-                  <div className="col-span-1 md:col-span-6 flex items-center gap-2">
+                  <div className={`col-span-1 flex items-center gap-2 ${isAdmin ? "md:col-span-6" : "md:col-span-7"}`}>
                     {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
                     <button type="button" className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</button>
                     {notice.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{notice.comments.length}</span>}
@@ -318,9 +323,11 @@ export default function Notices() {
                   <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500"><Calendar className="w-4 h-4 mr-1.5 md:hidden" />{notice.date}</div>
                   <div className="col-span-1 md:col-span-1 flex items-center md:justify-center text-sm text-gray-500"><Eye className="w-4 h-4 mr-1.5 md:hidden" />{notice.views}</div>
                   <div className="hidden md:flex col-span-1 items-center justify-center gap-1">{notice.files.length > 0 && <span className="flex items-center gap-1 text-xs text-gray-500"><FileText className="w-4 h-4 text-primary" />{notice.files.length}</span>}</div>
-                  <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(notice)} aria-label={`${notice.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(notice.id)} aria-label={`${notice.title} 삭제`}><Trash2 className="w-4 h-4" /></Button>
-                  </div>
+                  {isAdmin && (
+                    <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(notice)} aria-label={`${notice.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(notice.id)} aria-label={`${notice.title} 삭제`}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  )}
                 </div>
               )})}
               {!loading && error && (

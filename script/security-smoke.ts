@@ -55,9 +55,6 @@ const publicRoutes = [
   ["post", "/api/admissions", "publicContentMutationLimiter, asyncHandler"],
   ["patch", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
   ["delete", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["post", "/api/notices", "publicContentMutationLimiter, asyncHandler"],
-  ["patch", "/api/notices/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["delete", "/api/notices/:id", "publicContentMutationLimiter, asyncHandler"],
   ["post", "/api/papers", "publicContentMutationLimiter, asyncHandler"],
   ["patch", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
   ["delete", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
@@ -72,6 +69,17 @@ for (const [method, route, middleware] of publicRoutes) {
     `${method.toUpperCase()} ${route} must remain public and rate-limited`,
   );
   assert.equal(declaration.includes("adminOnly"), false);
+}
+for (const [method, route] of [
+  ["post", "/api/notices"],
+  ["patch", "/api/notices/:id"],
+  ["delete", "/api/notices/:id"],
+] as const) {
+  const declaration = routeSourceLines.find(line => line.includes(`app.${method}("${route}"`));
+  assert.ok(
+    declaration?.includes("adminOnly"),
+    `${method.toUpperCase()} ${route} must remain administrator-only`,
+  );
 }
 for (const [method, route] of [
   ["post", "/api/papers/:id/comments"],
@@ -291,6 +299,22 @@ await storage.deletePaper(paper.id);
 assert.equal(await storage.getPaper(paper.id), undefined);
 
 const integrationStorage = new MemoryStorage();
+const integrationAdminPassword = testPassword();
+const integrationAdmin = await integrationStorage.createAdmin({
+  username: `admin-${randomBytes(8).toString("hex")}`,
+  password: await hashPassword(integrationAdminPassword),
+  name: "Integration Admin",
+  registeredAt: "2026.08.31",
+  registeredTime: "18:00",
+});
+const protectedNotice = await integrationStorage.createNotice({
+  title: "Protected notice integration fixture",
+  content: "This fixture must not change without an administrator session",
+  date: "2026.08.31",
+  views: 0,
+  isImportant: false,
+  files: [],
+});
 const integrationApp = express();
 const integrationServer = createServer(integrationApp);
 const integrationNodeEnv = process.env.NODE_ENV;
@@ -322,12 +346,13 @@ try {
   assert.ok(address && typeof address === "object");
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
-  async function request(method: string, route: string, body?: unknown, origin = baseUrl) {
+  async function request(method: string, route: string, body?: unknown, origin = baseUrl, cookie?: string) {
     return await fetch(`${baseUrl}${route}`, {
       method,
       headers: {
         Origin: origin,
         "Sec-Fetch-Site": origin === baseUrl ? "same-origin" : "cross-site",
+        ...(cookie ? { Cookie: cookie } : {}),
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -349,18 +374,77 @@ try {
   assert.equal((await request("DELETE", `/api/admissions/${admission.id}`)).status, 200);
   assert.equal(await integrationStorage.getAdmissionGuideline(admission.id), undefined);
 
-  const noticeCreateResponse = await request("POST", "/api/notices", {
-    title: "Public notice integration test",
+  const noticeInput = {
+    title: "Administrator notice integration test",
     content: "Memory-only notice content",
     date: "2026.08.24",
     isImportant: false,
     files: [],
+  };
+  const noticeCountBeforeUnauthorizedRequests = (await integrationStorage.getNotices()).length;
+  const unauthorizedNoticeCreateResponse = await request("POST", "/api/notices", noticeInput);
+  assert.equal(unauthorizedNoticeCreateResponse.status, 401);
+  assert.equal((await unauthorizedNoticeCreateResponse.json() as { code: string }).code, "AUTH_REQUIRED");
+  assert.equal((await integrationStorage.getNotices()).length, noticeCountBeforeUnauthorizedRequests);
+
+  const unauthorizedNoticePatchResponse = await request(
+    "PATCH",
+    `/api/notices/${protectedNotice.id}`,
+    { title: "Unauthorized update must not persist" },
+  );
+  assert.equal(unauthorizedNoticePatchResponse.status, 401);
+  assert.equal((await integrationStorage.getNotice(protectedNotice.id))?.title, protectedNotice.title);
+
+  const unauthorizedNoticeDeleteResponse = await request("DELETE", `/api/notices/${protectedNotice.id}`);
+  assert.equal(unauthorizedNoticeDeleteResponse.status, 401);
+  assert.ok(await integrationStorage.getNotice(protectedNotice.id));
+
+  const loginResponse = await request("POST", "/api/users/login", {
+    username: integrationAdmin.username,
+    password: integrationAdminPassword,
   });
+  assert.equal(loginResponse.status, 200);
+  assert.equal((await loginResponse.json() as { role: string }).role, "ADMIN");
+  const setCookie = loginResponse.headers.get("set-cookie");
+  assert.ok(setCookie);
+  assert.match(setCookie, /HttpOnly/i);
+  assert.match(setCookie, /SameSite=Lax/i);
+  const adminCookie = setCookie.split(";", 1)[0];
+
+  const currentAdminResponse = await request("GET", "/api/users/me", undefined, baseUrl, adminCookie);
+  assert.equal(currentAdminResponse.status, 200);
+  assert.equal((await currentAdminResponse.json() as { role: string }).role, "ADMIN");
+
+  const rejectedNoticeCount = (await integrationStorage.getNotices()).length;
+  const rejectedNoticeOriginResponse = await request(
+    "POST",
+    "/api/notices",
+    noticeInput,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedNoticeOriginResponse.status, 403);
+  assert.equal((await rejectedNoticeOriginResponse.json() as { code: string }).code, "ORIGIN_REJECTED");
+  assert.equal((await integrationStorage.getNotices()).length, rejectedNoticeCount);
+
+  const noticeCreateResponse = await request("POST", "/api/notices", noticeInput, baseUrl, adminCookie);
   assert.equal(noticeCreateResponse.status, 201);
   const integrationNotice = await noticeCreateResponse.json() as { id: number };
   integrationNoticeId = integrationNotice.id;
-  assert.equal((await request("PATCH", `/api/notices/${integrationNotice.id}`, { title: "Updated public notice" })).status, 200);
-  assert.equal((await request("DELETE", `/api/notices/${integrationNotice.id}`)).status, 200);
+  assert.equal((await request(
+    "PATCH",
+    `/api/notices/${integrationNotice.id}`,
+    { title: "Updated administrator notice" },
+    baseUrl,
+    adminCookie,
+  )).status, 200);
+  assert.equal((await request(
+    "DELETE",
+    `/api/notices/${integrationNotice.id}`,
+    undefined,
+    baseUrl,
+    adminCookie,
+  )).status, 200);
   assert.equal(await integrationStorage.getNotice(integrationNotice.id), undefined);
 
   const paperCreateResponse = await request("POST", "/api/papers", {
