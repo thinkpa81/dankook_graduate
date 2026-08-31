@@ -356,7 +356,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.download(filePath, filename);
   }));
 
-  app.post("/api/upload", uploadLimiter, (req, res) => {
+  app.post("/api/upload", adminOnly, uploadLimiter, (req, res) => {
     upload.array("files", 5)(req, res, async error => {
       if (error instanceof multer.MulterError) {
         const message = error.code === "LIMIT_FILE_SIZE"
@@ -640,7 +640,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json(guideline);
   }));
 
-  app.post("/api/admissions", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.post("/api/admissions", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(admissionGuidelineCreateSchema, req, res);
     if (!input) return;
     const guideline = await storage.createAdmissionGuideline({
@@ -653,7 +653,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.status(201).json(guideline);
   }));
 
-  app.patch("/api/admissions/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.patch("/api/admissions/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(admissionGuidelineUpdateSchema, req, res);
     if (!id || !input) return;
@@ -665,7 +665,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json(guideline);
   }));
 
-  app.delete("/api/admissions/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.delete("/api/admissions/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getAdmissionGuideline(id)) {
@@ -792,7 +792,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json(paper);
   }));
 
-  app.post("/api/papers", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.post("/api/papers", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(paperCreateSchema, req, res);
     if (!input) return;
     const paper = await storage.createPaper({ ...input, views: 0 });
@@ -800,7 +800,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.status(201).json(paper);
   }));
 
-  app.patch("/api/papers/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.patch("/api/papers/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(paperUpdateSchema, req, res);
     if (!id || !input) return;
@@ -810,7 +810,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json(paper);
   }));
 
-  app.delete("/api/papers/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.delete("/api/papers/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getPaper(id)) return res.status(404).json({ error: "논문을 찾을 수 없습니다", code: "PAPER_NOT_FOUND" });

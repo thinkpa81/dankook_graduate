@@ -52,13 +52,6 @@ const hash = await hashPassword(password);
 
 const routesSource = await readFile(new URL("../server/routes.ts", import.meta.url), "utf8");
 const publicRoutes = [
-  ["post", "/api/admissions", "publicContentMutationLimiter, asyncHandler"],
-  ["patch", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["delete", "/api/admissions/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["post", "/api/papers", "publicContentMutationLimiter, asyncHandler"],
-  ["patch", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["delete", "/api/papers/:id", "publicContentMutationLimiter, asyncHandler"],
-  ["post", "/api/upload", "uploadLimiter"],
   ["get", "/uploads/:filename", "downloadLimiter, asyncHandler"],
 ] as const;
 const routeSourceLines = routesSource.split(/\r?\n/);
@@ -70,15 +63,30 @@ for (const [method, route, middleware] of publicRoutes) {
   );
   assert.equal(declaration.includes("adminOnly"), false);
 }
-for (const [method, route] of [
-  ["post", "/api/notices"],
-  ["patch", "/api/notices/:id"],
-  ["delete", "/api/notices/:id"],
+for (const [method, route, limiter] of [
+  ["post", "/api/notices", "publicContentMutationLimiter"],
+  ["patch", "/api/notices/:id", "publicContentMutationLimiter"],
+  ["delete", "/api/notices/:id", "publicContentMutationLimiter"],
+  ["post", "/api/admissions", "publicContentMutationLimiter"],
+  ["patch", "/api/admissions/:id", "publicContentMutationLimiter"],
+  ["delete", "/api/admissions/:id", "publicContentMutationLimiter"],
+  ["post", "/api/papers", "publicContentMutationLimiter"],
+  ["patch", "/api/papers/:id", "publicContentMutationLimiter"],
+  ["delete", "/api/papers/:id", "publicContentMutationLimiter"],
+  ["post", "/api/upload", "uploadLimiter"],
 ] as const) {
   const declaration = routeSourceLines.find(line => line.includes(`app.${method}("${route}"`));
   assert.ok(
     declaration?.includes("adminOnly"),
     `${method.toUpperCase()} ${route} must remain administrator-only`,
+  );
+  assert.ok(
+    declaration.includes(limiter),
+    `${method.toUpperCase()} ${route} must remain rate-limited`,
+  );
+  assert.ok(
+    declaration.indexOf("adminOnly") < declaration.indexOf(limiter),
+    `${method.toUpperCase()} ${route} must authenticate before applying the mutation limiter`,
   );
 }
 for (const [method, route] of [
@@ -315,6 +323,32 @@ const protectedNotice = await integrationStorage.createNotice({
   isImportant: false,
   files: [],
 });
+const protectedAdmission = await integrationStorage.createAdmissionGuideline({
+  title: "Protected admission integration fixture",
+  content: "This fixture must not change without an administrator session",
+  organization: "Dankook Graduate School",
+  date: "2026-08-31",
+  views: 0,
+  attachmentUrl: null,
+  attachmentName: null,
+});
+const protectedPaper = await integrationStorage.createPaper({
+  category: "conference",
+  title: "Protected conference integration fixture",
+  authors: "Dankook Graduate School",
+  firstAuthor: null,
+  correspondingAuthor: null,
+  venue: "Security Integration Conference",
+  journal: null,
+  volume: null,
+  year: "2026",
+  abstract: null,
+  keywords: [],
+  files: [],
+  websiteUrl: "https://example.edu/protected-conference",
+  date: "2026.08.31",
+  views: 0,
+});
 const integrationApp = express();
 const integrationServer = createServer(integrationApp);
 const integrationNodeEnv = process.env.NODE_ENV;
@@ -359,20 +393,76 @@ try {
     });
   }
 
-  const admissionCreateResponse = await request("POST", "/api/admissions", {
-    title: "Public admission integration test",
+  const admissionInput = {
+    title: "Administrator admission integration test",
     content: "Memory-only admission content",
     organization: "Dankook Graduate School",
     date: "2026-08-24",
     attachmentUrl: null,
     attachmentName: null,
-  });
-  assert.equal(admissionCreateResponse.status, 201);
-  const admission = await admissionCreateResponse.json() as { id: number };
-  integrationAdmissionId = admission.id;
-  assert.equal((await request("PATCH", `/api/admissions/${admission.id}`, { title: "Updated public admission" })).status, 200);
-  assert.equal((await request("DELETE", `/api/admissions/${admission.id}`)).status, 200);
-  assert.equal(await integrationStorage.getAdmissionGuideline(admission.id), undefined);
+  };
+  const paperInput = {
+    category: "journal",
+    title: "Administrator journal integration test",
+    authors: "Dankook Graduate School",
+    firstAuthor: null,
+    correspondingAuthor: null,
+    venue: null,
+    journal: "Security Integration Journal",
+    volume: null,
+    year: "2026",
+    abstract: null,
+    keywords: [],
+    files: [],
+    websiteUrl: "https://example.edu/administrator-paper",
+    date: "2026.08.24",
+  };
+
+  const admissionCountBeforeUnauthorizedRequests = (await integrationStorage.getAdmissionGuidelines()).length;
+  const unauthorizedAdmissionCreateResponse = await request("POST", "/api/admissions", admissionInput);
+  assert.equal(unauthorizedAdmissionCreateResponse.status, 401);
+  assert.equal((await unauthorizedAdmissionCreateResponse.json() as { code: string }).code, "AUTH_REQUIRED");
+  assert.equal((await integrationStorage.getAdmissionGuidelines()).length, admissionCountBeforeUnauthorizedRequests);
+
+  const unauthorizedAdmissionPatchResponse = await request(
+    "PATCH",
+    `/api/admissions/${protectedAdmission.id}`,
+    { title: "Unauthorized admission update must not persist" },
+  );
+  assert.equal(unauthorizedAdmissionPatchResponse.status, 401);
+  assert.equal(
+    (await integrationStorage.getAdmissionGuideline(protectedAdmission.id))?.title,
+    protectedAdmission.title,
+  );
+
+  const unauthorizedAdmissionDeleteResponse = await request(
+    "DELETE",
+    `/api/admissions/${protectedAdmission.id}`,
+  );
+  assert.equal(unauthorizedAdmissionDeleteResponse.status, 401);
+  assert.ok(await integrationStorage.getAdmissionGuideline(protectedAdmission.id));
+
+  const paperCountBeforeUnauthorizedRequests = (await integrationStorage.getPapers()).length;
+  const unauthorizedPaperCreateResponse = await request("POST", "/api/papers", paperInput);
+  assert.equal(unauthorizedPaperCreateResponse.status, 401);
+  assert.equal((await unauthorizedPaperCreateResponse.json() as { code: string }).code, "AUTH_REQUIRED");
+  assert.equal((await integrationStorage.getPapers()).length, paperCountBeforeUnauthorizedRequests);
+
+  const unauthorizedPaperPatchResponse = await request(
+    "PATCH",
+    `/api/papers/${protectedPaper.id}`,
+    { title: "Unauthorized paper update must not persist" },
+  );
+  assert.equal(unauthorizedPaperPatchResponse.status, 401);
+  assert.equal((await integrationStorage.getPaper(protectedPaper.id))?.title, protectedPaper.title);
+
+  const unauthorizedPaperDeleteResponse = await request("DELETE", `/api/papers/${protectedPaper.id}`);
+  assert.equal(unauthorizedPaperDeleteResponse.status, 401);
+  assert.ok(await integrationStorage.getPaper(protectedPaper.id));
+
+  const unauthorizedUploadResponse = await request("POST", "/api/upload");
+  assert.equal(unauthorizedUploadResponse.status, 401);
+  assert.equal((await unauthorizedUploadResponse.json() as { code: string }).code, "AUTH_REQUIRED");
 
   const noticeInput = {
     title: "Administrator notice integration test",
@@ -427,6 +517,86 @@ try {
   assert.equal((await rejectedNoticeOriginResponse.json() as { code: string }).code, "ORIGIN_REJECTED");
   assert.equal((await integrationStorage.getNotices()).length, rejectedNoticeCount);
 
+  const rejectedAdmissionCount = (await integrationStorage.getAdmissionGuidelines()).length;
+  const rejectedAdmissionOriginCreateResponse = await request(
+    "POST",
+    "/api/admissions",
+    admissionInput,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedAdmissionOriginCreateResponse.status, 403);
+  assert.equal(
+    (await rejectedAdmissionOriginCreateResponse.json() as { code: string }).code,
+    "ORIGIN_REJECTED",
+  );
+  assert.equal((await integrationStorage.getAdmissionGuidelines()).length, rejectedAdmissionCount);
+
+  const rejectedAdmissionOriginPatchResponse = await request(
+    "PATCH",
+    `/api/admissions/${protectedAdmission.id}`,
+    { title: "Cross-origin admission update must not persist" },
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedAdmissionOriginPatchResponse.status, 403);
+  assert.equal(
+    (await integrationStorage.getAdmissionGuideline(protectedAdmission.id))?.title,
+    protectedAdmission.title,
+  );
+
+  const rejectedAdmissionOriginDeleteResponse = await request(
+    "DELETE",
+    `/api/admissions/${protectedAdmission.id}`,
+    undefined,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedAdmissionOriginDeleteResponse.status, 403);
+  assert.ok(await integrationStorage.getAdmissionGuideline(protectedAdmission.id));
+
+  const rejectedPaperCount = (await integrationStorage.getPapers()).length;
+  const rejectedPaperOriginCreateResponse = await request(
+    "POST",
+    "/api/papers",
+    paperInput,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedPaperOriginCreateResponse.status, 403);
+  assert.equal((await rejectedPaperOriginCreateResponse.json() as { code: string }).code, "ORIGIN_REJECTED");
+  assert.equal((await integrationStorage.getPapers()).length, rejectedPaperCount);
+
+  const rejectedPaperOriginPatchResponse = await request(
+    "PATCH",
+    `/api/papers/${protectedPaper.id}`,
+    { title: "Cross-origin paper update must not persist" },
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedPaperOriginPatchResponse.status, 403);
+  assert.equal((await integrationStorage.getPaper(protectedPaper.id))?.title, protectedPaper.title);
+
+  const rejectedPaperOriginDeleteResponse = await request(
+    "DELETE",
+    `/api/papers/${protectedPaper.id}`,
+    undefined,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedPaperOriginDeleteResponse.status, 403);
+  assert.ok(await integrationStorage.getPaper(protectedPaper.id));
+
+  const rejectedUploadOriginResponse = await request(
+    "POST",
+    "/api/upload",
+    undefined,
+    "https://untrusted.example",
+    adminCookie,
+  );
+  assert.equal(rejectedUploadOriginResponse.status, 403);
+  assert.equal((await rejectedUploadOriginResponse.json() as { code: string }).code, "ORIGIN_REJECTED");
+
   const noticeCreateResponse = await request("POST", "/api/notices", noticeInput, baseUrl, adminCookie);
   assert.equal(noticeCreateResponse.status, 201);
   const integrationNotice = await noticeCreateResponse.json() as { id: number };
@@ -447,49 +617,82 @@ try {
   )).status, 200);
   assert.equal(await integrationStorage.getNotice(integrationNotice.id), undefined);
 
-  const paperCreateResponse = await request("POST", "/api/papers", {
-    category: "journal",
-    title: "Public paper integration test",
-    authors: "Dankook Graduate School",
-    firstAuthor: null,
-    correspondingAuthor: null,
-    venue: null,
-    journal: null,
-    volume: null,
-    year: "2026",
-    abstract: null,
-    keywords: [],
-    files: [],
-    websiteUrl: "https://example.edu/public-paper",
-    date: "2026.08.24",
-  });
+  const admissionCreateResponse = await request(
+    "POST",
+    "/api/admissions",
+    admissionInput,
+    baseUrl,
+    adminCookie,
+  );
+  assert.equal(admissionCreateResponse.status, 201);
+  const integrationAdmission = await admissionCreateResponse.json() as { id: number };
+  integrationAdmissionId = integrationAdmission.id;
+  const admissionPatchResponse = await request(
+    "PATCH",
+    `/api/admissions/${integrationAdmission.id}`,
+    { title: "Updated administrator admission" },
+    baseUrl,
+    adminCookie,
+  );
+  assert.equal(admissionPatchResponse.status, 200);
+  assert.equal(
+    (await integrationStorage.getAdmissionGuideline(integrationAdmission.id))?.title,
+    "Updated administrator admission",
+  );
+  assert.equal((await request(
+    "DELETE",
+    `/api/admissions/${integrationAdmission.id}`,
+    undefined,
+    baseUrl,
+    adminCookie,
+  )).status, 200);
+  assert.equal(await integrationStorage.getAdmissionGuideline(integrationAdmission.id), undefined);
+
+  const paperCreateResponse = await request(
+    "POST",
+    "/api/papers",
+    paperInput,
+    baseUrl,
+    adminCookie,
+  );
   assert.equal(paperCreateResponse.status, 201);
   const integrationPaper = await paperCreateResponse.json() as { id: number };
   integrationPaperId = integrationPaper.id;
   const paperGetResponse = await fetch(`${baseUrl}/api/papers/${integrationPaper.id}`);
   assert.equal(paperGetResponse.status, 200);
   assert.equal("comments" in await paperGetResponse.json() as Record<string, unknown>, false);
-  assert.equal((await request("PATCH", `/api/papers/${integrationPaper.id}`, { title: "Updated public paper" })).status, 200);
+  const paperPatchResponse = await request(
+    "PATCH",
+    `/api/papers/${integrationPaper.id}`,
+    { title: "Updated administrator journal" },
+    baseUrl,
+    adminCookie,
+  );
+  assert.equal(paperPatchResponse.status, 200);
+  assert.equal(
+    (await integrationStorage.getPaper(integrationPaper.id))?.title,
+    "Updated administrator journal",
+  );
 
   assert.equal((await request("POST", `/api/papers/${integrationPaper.id}/comments`, { content: "Retired" })).status, 410);
   assert.equal((await request("PATCH", "/api/paper-comments/1", { content: "Retired" })).status, 410);
   assert.equal((await request("DELETE", "/api/paper-comments/1")).status, 410);
 
-  assert.equal((await request("DELETE", `/api/papers/${integrationPaper.id}`)).status, 200);
+  assert.equal((await request(
+    "DELETE",
+    `/api/papers/${integrationPaper.id}`,
+    undefined,
+    baseUrl,
+    adminCookie,
+  )).status, 200);
   assert.equal(await integrationStorage.getPaper(integrationPaper.id), undefined);
-
-  const rejectedOriginResponse = await request("POST", "/api/admissions", {
-    title: "Rejected cross-origin admission",
-    content: "Must not be stored",
-    organization: "Untrusted",
-    date: "2026-08-24",
-  }, "https://untrusted.example");
-  assert.equal(rejectedOriginResponse.status, 403);
-  assert.equal((await integrationStorage.getAdmissionGuidelines()).length, 0);
 } finally {
   if (integrationAdmissionId !== null) await integrationStorage.deleteAdmissionGuideline(integrationAdmissionId);
   if (integrationNoticeId !== null) await integrationStorage.deleteNotice(integrationNoticeId);
   if (integrationPaperId !== null) await integrationStorage.deletePaper(integrationPaperId);
+  await integrationStorage.deleteAdmissionGuideline(protectedAdmission.id);
+  await integrationStorage.deleteNotice(protectedNotice.id);
+  await integrationStorage.deletePaper(protectedPaper.id);
   await new Promise<void>((resolve, reject) => {
     if (!integrationServer.listening) return resolve();
     integrationServer.close(error => error ? reject(error) : resolve());

@@ -29,6 +29,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
 import { api, Paper } from "@/lib/api";
+import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 
 type CategoryKey = "conference" | "journal";
@@ -56,6 +57,8 @@ const ITEMS_PER_PAGE = 5;
 export default function Papers() {
   const params = useParams<{ category?: string }>();
   const category = normalizeCategory(params.category);
+  const { user: sessionUser } = useSession();
+  const isAdmin = sessionUser?.role === "ADMIN";
 
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,7 +251,9 @@ export default function Papers() {
               <Button variant="outline" onClick={() => { setShowAll(!showAll); setCurrentPage(1); }} className="rounded-lg font-semibold px-4 h-11">
                 <Eye className="w-4 h-4 mr-2" />{showAll ? "페이지별 보기" : "전체보기"}
               </Button>
-              <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11"><Plus className="w-4 h-4 mr-2" />등록</Button>
+              {isAdmin && (
+                <Button onClick={openAdd} className="rounded-lg shadow-md font-bold px-6 bg-gradient-to-r from-primary to-blue-600 h-11"><Plus className="w-4 h-4 mr-2" />등록</Button>
+              )}
             </div>
           </div>
 
@@ -287,7 +292,9 @@ export default function Papers() {
                           <div className="mt-3 flex flex-wrap gap-2">{paper.files.map((fileName, index) => <span key={index} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"><FileText className="h-3.5 w-3.5" aria-hidden="true" />{fileName}</span>)}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1"><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>
+                      {isAdmin && (
+                        <div className="flex items-center gap-1"><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg" onClick={() => openEdit(paper)} aria-label={`${paper.title} 수정`}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg text-destructive" onClick={() => setDeleteId(paper.id)} aria-label={`${paper.title} 삭제`}><Trash2 className="w-4 h-4" /></Button></div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -349,7 +356,7 @@ export default function Papers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddOpen} onOpenChange={(open) => { if (!saving) setIsAddOpen(open); }}>
+      <Dialog open={isAdmin && isAddOpen} onOpenChange={(open) => { if (!saving) setIsAddOpen(open); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto rounded-xl sm:max-w-lg" data-testid="paper-add-dialog">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">등록</DialogTitle>
@@ -376,7 +383,7 @@ export default function Papers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditOpen} onOpenChange={(open) => { if (!saving) setIsEditOpen(open); }}>
+      <Dialog open={isAdmin && isEditOpen} onOpenChange={(open) => { if (!saving) setIsEditOpen(open); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto rounded-xl sm:max-w-lg">
           <DialogHeader><DialogTitle className="text-xl font-bold">논문 수정</DialogTitle><DialogDescription>논문 제목, 저자와 사이트 주소를 수정합니다.</DialogDescription></DialogHeader>
           <form className="mt-4 space-y-5" onSubmit={(event) => { event.preventDefault(); void handleEdit(); }}>
@@ -388,7 +395,7 @@ export default function Papers() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
+      <AlertDialog open={isAdmin && deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
         <AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>논문을 삭제하시겠습니까?</AlertDialogTitle><AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleting} className="h-11 rounded-lg">취소</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void handleDelete(); }} className="h-11 rounded-lg bg-destructive text-destructive-foreground">{deleting ? "삭제 중..." : "삭제"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
