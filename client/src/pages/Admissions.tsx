@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api, type AdmissionGuideline } from "@/lib/api";
+import { useSession } from "@/hooks/use-session";
 
 type GuidelineForm = {
   title: string;
@@ -100,6 +101,8 @@ const previewGuidelines: AdmissionGuideline[] = [
 ];
 
 export default function Admissions() {
+  const { user: sessionUser } = useSession();
+  const isAdmin = sessionUser?.role === "ADMIN";
   const [guidelines, setGuidelines] = useState<AdmissionGuideline[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -276,9 +279,11 @@ export default function Admissions() {
                   모집요강
                 </h2>
               </div>
-              <Button onClick={openCreate} className="h-11 rounded-md bg-[#2156D9] px-5 font-bold hover:bg-[#1848bc]" data-testid="button-add-admission">
-                <Plus className="mr-2 h-4 w-4" aria-hidden="true" />모집요강 등록
-              </Button>
+              {isAdmin && (
+                <Button onClick={openCreate} className="h-11 rounded-md bg-[#2156D9] px-5 font-bold hover:bg-[#1848bc]" data-testid="button-add-admission">
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />모집요강 등록
+                </Button>
+              )}
             </div>
 
             <div className="my-6 flex justify-end">
@@ -380,12 +385,16 @@ export default function Admissions() {
                         <Download className="h-5 w-5" aria-hidden="true" />
                       </Button>
                     )}
-                    <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(item)} className="h-11 w-11 rounded-md" aria-label={`${item.title} 수정`}>
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="h-11 w-11 rounded-md text-rose-700 hover:bg-rose-50 hover:text-rose-800" aria-label={`${item.title} 삭제`}>
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(item)} className="h-11 w-11 rounded-md" aria-label={`${item.title} 수정`}>
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="h-11 w-11 rounded-md text-rose-700 hover:bg-rose-50 hover:text-rose-800" aria-label={`${item.title} 삭제`}>
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </article>
               ))}
@@ -418,7 +427,7 @@ export default function Admissions() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={(open) => { if (!saving) setFormOpen(open); }}>
+      <Dialog open={isAdmin && formOpen} onOpenChange={(open) => { if (!saving) setFormOpen(open); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-xl sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black">모집요강 {editing ? "수정" : "등록"}</DialogTitle>
@@ -461,7 +470,7 @@ export default function Admissions() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
+      <AlertDialog open={isAdmin && deleteId !== null} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>모집요강을 삭제하시겠습니까?</AlertDialogTitle>
