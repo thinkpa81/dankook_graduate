@@ -702,7 +702,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json({ ...notice, comments: (await storage.getNoticeComments(id)).map(comment => publicComment(req, comment)) });
   }));
 
-  app.post("/api/notices", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.post("/api/notices", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const input = parseBody(noticeCreateSchema, req, res);
     if (!input) return;
     const notice = await storage.createNotice({ ...input, views: 0 });
@@ -710,7 +710,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.status(201).json({ ...notice, comments: [] });
   }));
 
-  app.patch("/api/notices/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.patch("/api/notices/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     const input = parseBody(noticeUpdateSchema, req, res);
     if (!id || !input) return;
@@ -720,7 +720,7 @@ export async function registerRoutes(httpServer: Server, app: Express, storageOv
     return res.json({ ...notice, comments: (await storage.getNoticeComments(id)).map(comment => publicComment(req, comment)) });
   }));
 
-  app.delete("/api/notices/:id", publicContentMutationLimiter, asyncHandler(async (req, res) => {
+  app.delete("/api/notices/:id", adminOnly, publicContentMutationLimiter, asyncHandler(async (req, res) => {
     const id = parseId(req, res);
     if (!id) return;
     if (!await storage.getNotice(id)) return res.status(404).json({ error: "공지사항을 찾을 수 없습니다", code: "NOTICE_NOT_FOUND" });

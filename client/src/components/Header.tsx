@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, Menu } from "lucide-react";
+import { ChevronDown, LogOut, Menu, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import dkuLogo from "@assets/image_1767877726952.png";
+import { api } from "@/lib/api";
+import { notifyAuthChanged, useSession } from "@/hooks/use-session";
 
 const navItems = [
   { title: "학과 소개", href: "/about" },
@@ -40,11 +42,38 @@ const navItems = [
 export default function Header() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user: sessionUser } = useSession();
+
+  const movePageToTop = () => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  const handleMobileInternalLink = () => {
+    setMobileOpen(false);
+    window.requestAnimationFrame(movePageToTop);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      notifyAuthChanged();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-[0_2px_10px_rgba(15,35,64,0.05)]">
       <div className="hidden border-b border-slate-200 bg-slate-50 md:block">
         <div className="mx-auto flex h-8 max-w-[1200px] items-center justify-end gap-5 px-8 text-xs font-semibold text-slate-600 lg:px-10">
+          {sessionUser?.role === "ADMIN" ? (
+            <>
+              <Link href="/admin" className="transition-colors hover:text-[#2156D9]">관리자</Link>
+              <button type="button" onClick={() => void handleLogout()} className="transition-colors hover:text-[#2156D9]" data-testid="button-logout">로그아웃</button>
+            </>
+          ) : (
+            <Link href="/admin" className="transition-colors hover:text-[#2156D9]" data-testid="link-admin-login">관리자 로그인</Link>
+          )}
           <a href="/#site-menu" className="transition-colors hover:text-[#2156D9]">사이트맵</a>
         </div>
       </div>
@@ -129,7 +158,7 @@ export default function Header() {
                   {item.external ? (
                     <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-2 py-3 text-base font-bold text-slate-800" data-testid={`mobile-nav-${item.title}`}>{item.title}</a>
                   ) : (
-                    <Link href={item.href} onClick={() => setMobileOpen(false)} className={`block px-2 py-3 text-base font-bold ${active ? "text-[#2156D9]" : "text-slate-800"}`} data-testid={`mobile-nav-${item.title}`}>{item.title}</Link>
+                    <Link href={item.href} onClick={handleMobileInternalLink} className={`block px-2 py-3 text-base font-bold ${active ? "text-[#2156D9]" : "text-slate-800"}`} data-testid={`mobile-nav-${item.title}`}>{item.title}</Link>
                   )}
                   {item.children && (
                     <div className="mb-2 grid grid-cols-1 gap-1 rounded-md bg-slate-50 p-2">
@@ -137,7 +166,7 @@ export default function Header() {
                         <Link
                           key={child.title}
                           href={child.href}
-                          onClick={() => setMobileOpen(false)}
+                          onClick={handleMobileInternalLink}
                           className={`rounded-sm px-2 py-2 text-sm font-medium hover:bg-white hover:text-[#2156D9] ${location === child.href ? "bg-white text-[#2156D9]" : "text-slate-600"}`}
                           aria-current={location === child.href ? "page" : undefined}
                           data-testid={`mobile-nav-${child.title}`}
@@ -151,6 +180,20 @@ export default function Header() {
                 );
               })}
             </nav>
+
+            <div className="mt-6 grid gap-2">
+              <Button variant="outline" className="h-11 w-full rounded-md font-bold" asChild>
+                <Link href="/admin" onClick={handleMobileInternalLink} data-testid="mobile-link-admin">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  {sessionUser?.role === "ADMIN" ? "관리자" : "관리자 로그인"}
+                </Link>
+              </Button>
+              {sessionUser?.role === "ADMIN" && (
+                <Button variant="outline" className="h-11 w-full rounded-md font-bold" onClick={() => { setMobileOpen(false); void handleLogout(); }}>
+                  <LogOut className="mr-2 h-4 w-4" />로그아웃
+                </Button>
+              )}
+            </div>
 
           </SheetContent>
         </Sheet>
