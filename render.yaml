@@ -20,4 +20,6 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: PUBLIC_ORIGIN
-        value: https://dankook-graduate.onrender.com
+        value: https://dankookaims.org
+      - key: NAVER_SITE_VERIFICATION
+        sync: false

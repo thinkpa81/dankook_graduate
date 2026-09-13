@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useParams } from "wouter";
 import { motion } from "framer-motion";
 import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,9 @@ const MAX_NOTICE_FILES = 5;
 const MAX_NOTICE_FILE_BYTES = 10 * 1024 * 1024;
 
 export default function Notices() {
+  const params = useParams<{ id?: string }>();
+  const [, setLocation] = useLocation();
+  const openedNoticeIdRef = useRef<number | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +262,38 @@ export default function Notices() {
     }
   };
 
+  useEffect(() => {
+    if (!params.id) {
+      if (openedNoticeIdRef.current !== null) {
+        openedNoticeIdRef.current = null;
+        setViewingNotice(null);
+        setIsViewOpen(false);
+      }
+      return;
+    }
+    if (loading) return;
+    const noticeId = Number(params.id);
+    const notice = Number.isInteger(noticeId)
+      ? notices.find(candidate => candidate.id === noticeId)
+      : undefined;
+    if (!notice) {
+      setLocation("/notices");
+      return;
+    }
+    if (openedNoticeIdRef.current === noticeId) return;
+    openedNoticeIdRef.current = noticeId;
+    void openView(notice);
+  }, [loading, notices, params.id, setLocation]);
+
+  const handleViewOpenChange = (open: boolean) => {
+    setIsViewOpen(open);
+    if (!open) {
+      setViewingNotice(null);
+      openedNoticeIdRef.current = null;
+      if (params.id) setLocation("/notices");
+    }
+  };
+
   const openAdd = () => {
     setFormData({ title: "", content: "", isImportant: false, files: [] });
     setIsAddOpen(true);
@@ -317,7 +353,7 @@ export default function Notices() {
                   <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{displayNumber}</div>
                   <div className={`col-span-1 flex items-center gap-2 ${isAdmin ? "md:col-span-6" : "md:col-span-7"}`}>
                     {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
-                    <button type="button" className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" onClick={() => openView(notice)} data-testid={`link-notice-${notice.id}`}>{notice.title}</button>
+                    <Link href={`/notices/${notice.id}`} className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" data-testid={`link-notice-${notice.id}`}>{notice.title}</Link>
                     {notice.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{notice.comments.length}</span>}
                   </div>
                   <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500"><Calendar className="w-4 h-4 mr-1.5 md:hidden" />{notice.date}</div>
@@ -351,7 +387,7 @@ export default function Notices() {
         </div>
       </section>
 
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+      <Dialog open={isViewOpen} onOpenChange={handleViewOpenChange}>
         <DialogContent className="sm:max-w-2xl rounded-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold pr-8">{viewingNotice?.title}</DialogTitle>

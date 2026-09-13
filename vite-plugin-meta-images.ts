@@ -4,18 +4,13 @@ import path from 'path';
 
 /**
  * Vite plugin that updates og:image and twitter:image meta tags
- * to point to the app's opengraph image with the correct Replit domain.
+ * to point to the app's opengraph image with the canonical public origin.
  */
 export function metaImagesPlugin(): Plugin {
   return {
     name: 'vite-plugin-meta-images',
     transformIndexHtml(html) {
       const baseUrl = getDeploymentUrl();
-      if (!baseUrl) {
-        log('[meta-images] no Replit deployment domain found, skipping meta tag updates');
-        return html;
-      }
-
       // Check if opengraph image exists in public directory
       const publicDir = path.resolve(process.cwd(), 'client', 'public');
       const opengraphPngPath = path.join(publicDir, 'opengraph.png');
@@ -55,7 +50,17 @@ export function metaImagesPlugin(): Plugin {
   };
 }
 
-function getDeploymentUrl(): string | null {
+function getDeploymentUrl(): string {
+  const publicOrigin = process.env.PUBLIC_ORIGIN?.trim();
+  if (publicOrigin) {
+    try {
+      const url = new URL(publicOrigin);
+      if (url.protocol === 'https:' || url.protocol === 'http:') return url.origin;
+    } catch {
+      log('[meta-images] ignoring invalid PUBLIC_ORIGIN');
+    }
+  }
+
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
     const url = `https://${process.env.REPLIT_INTERNAL_APP_DOMAIN}`;
     log('[meta-images] using internal app domain:', url);
@@ -68,7 +73,7 @@ function getDeploymentUrl(): string | null {
     return url;
   }
 
-  return null;
+  return 'https://dankookaims.org';
 }
 
 function log(...args: any[]): void {
