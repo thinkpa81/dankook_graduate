@@ -23,3 +23,5 @@ services:
         value: https://dankookaims.org
       - key: NAVER_SITE_VERIFICATION
         sync: false
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false

@@ -126,6 +126,22 @@ function escapeHtmlAttribute(value: string): string {
   return escapeXml(value);
 }
 
+const VERIFICATION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{10,200}$/;
+
+function applyVerificationMeta(html: string, name: string, value?: string): string {
+  const existingTag = new RegExp(
+    `\\s*<meta\\b(?=[^>]*\\bname=["']${name}["'])[^>]*>`,
+    "gi",
+  );
+  const withoutExistingTags = html.replace(existingTag, "");
+  if (!value || !VERIFICATION_TOKEN_PATTERN.test(value)) return withoutExistingTags;
+
+  return withoutExistingTags.replace(
+    "</head>",
+    `    <meta name="${name}" content="${escapeHtmlAttribute(value)}" />\n  </head>`,
+  );
+}
+
 function normalizeLastModified(value?: Date | string | null): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -263,7 +279,8 @@ function replaceMetaContent(html: string, attribute: "name" | "property", key: s
 export function renderSeoHtml(indexTemplate: string, page: SeoPage): string {
   const canonicalUrl = `${CANONICAL_ORIGIN}${page.canonicalPath === "/" ? "/" : page.canonicalPath}`;
   const robots = page.indexable ? "index,follow,max-image-preview:large" : "noindex,nofollow";
-  const verification = process.env.NAVER_SITE_VERIFICATION?.trim();
+  const naverVerification = process.env.NAVER_SITE_VERIFICATION?.trim();
+  const googleVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
 
   let html = indexTemplate
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeXml(page.title)}</title>`)
@@ -282,13 +299,8 @@ export function renderSeoHtml(indexTemplate: string, page: SeoPage): string {
   html = replaceMetaContent(html, "name", "twitter:description", page.description);
   html = replaceMetaContent(html, "name", "twitter:image", `${CANONICAL_ORIGIN}/opengraph.jpg`);
 
-  html = html.replace(/\s*<meta\s+name="naver-site-verification"\s+content="[^"]*"\s*\/?>/gi, "");
-  if (verification && /^[A-Za-z0-9_-]{10,200}$/.test(verification)) {
-    html = html.replace(
-      "</head>",
-      `    <meta name="naver-site-verification" content="${escapeHtmlAttribute(verification)}" />\n  </head>`,
-    );
-  }
+  html = applyVerificationMeta(html, "naver-site-verification", naverVerification);
+  html = applyVerificationMeta(html, "google-site-verification", googleVerification);
 
   const navigation = primaryNavigation
     .map(({ path, label }) => {
