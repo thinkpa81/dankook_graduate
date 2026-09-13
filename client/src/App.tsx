@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Redirect, Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -17,8 +17,16 @@ import NotFound from "@/pages/not-found";
 
 function ScrollToTop() {
   const [location] = useLocation();
+  const previousLocationRef = useRef(location);
 
   useLayoutEffect(() => {
+    const previousLocation = previousLocationRef.current;
+    const isNoticeDetail = (path: string) => /^\/notices\/[1-9]\d*$/.test(path);
+    const isNoticeDialogTransition =
+      (previousLocation === "/notices" && isNoticeDetail(location))
+      || (isNoticeDetail(previousLocation) && location === "/notices");
+    previousLocationRef.current = location;
+    if (isNoticeDialogTransition) return;
     // Route navigation should be immediate and must not inherit the global
     // smooth-scroll behavior, including for people who prefer reduced motion.
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -36,7 +44,7 @@ function Router() {
         <Route path="/about" component={About} />
         <Route path="/notices" component={Notices} />
         <Route path="/notices/:id" component={Notices} />
-        <Route path="/papers" component={Papers} />
+        <Route path="/papers"><Redirect to="/papers/conference" replace /></Route>
         <Route path="/papers/:category" component={Papers} />
         <Route path="/regulations" component={Regulations} />
         <Route path="/admissions"><Redirect to="/admissions/guidelines" /></Route>

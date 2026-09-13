@@ -34,6 +34,7 @@ import {
   requireRole,
   verifyPassword,
 } from "./security";
+import { registerSeoRoutes } from "./seo";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o700 });
@@ -749,6 +750,7 @@ const dummyPasswordHash = hashPassword(randomBytes(32).toString("hex"));
 
 export async function registerRoutes(httpServer: Server, app: Express, storageOverride?: IStorage): Promise<Server> {
   const storage = storageOverride ?? getStorage();
+  registerSeoRoutes(app, storage);
   const configuredAdminUsername = process.env.ADMIN_USERNAME?.trim();
   const configuredAdminHash = process.env.ADMIN_PASSWORD_HASH?.trim();
   const hasConfiguredAdmin = Boolean(configuredAdminUsername && configuredAdminHash);

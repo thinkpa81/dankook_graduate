@@ -260,7 +260,7 @@ export default function Admin() {
                     <Link href="/notices"><Bell className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">공지사항</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
                   </Button>
                   <Button variant="outline" asChild className="h-auto min-h-24 justify-start rounded-xl border-slate-200 bg-white p-5 text-left shadow-sm hover:border-blue-200 hover:bg-blue-50/40">
-                    <Link href="/papers"><BookOpen className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">논문</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
+                    <Link href="/papers/conference"><BookOpen className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">논문</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>
                   </Button>
                   <Button variant="outline" asChild className="h-auto min-h-24 justify-start rounded-xl border-slate-200 bg-white p-5 text-left shadow-sm hover:border-blue-200 hover:bg-blue-50/40">
                     <Link href="/admissions/guidelines"><ClipboardList className="mr-3 h-5 w-5 shrink-0 text-[#2156D9]" aria-hidden="true" /><span><strong className="block text-base text-slate-900">입학안내 · 모집요강</strong><span className="mt-1 block text-sm font-normal text-slate-500">등록·수정·삭제</span></span></Link>

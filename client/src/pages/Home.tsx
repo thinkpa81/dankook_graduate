@@ -23,7 +23,7 @@ import { api, type Notice } from "@/lib/api";
 
 const resources = [
   { title: "학과 내규 및 학사 운영 기준", href: "/regulations", label: "학과 내규" },
-  { title: "국내·외 학술 논문 및 연구 실적", href: "/papers", label: "논문" },
+  { title: "국내·외 학술 논문 및 연구 실적", href: "/papers/conference", label: "논문" },
   { title: "학과 교육·연구 활동 사진", href: "/photos", label: "사진" },
   {
     title: "데이터지식서비스공학과 공유 자료실",
@@ -37,7 +37,7 @@ const resources = [
 const quickLinks = [
   { icon: GraduationCap, title: "학과 소개", href: "/about", external: false },
   { icon: Megaphone, title: "공지사항", href: "/notices", external: false },
-  { icon: BookOpen, title: "논문", href: "/papers", external: false },
+  { icon: BookOpen, title: "논문", href: "/papers/conference", external: false },
   { icon: Scale, title: "학과 내규", href: "/regulations", external: false },
   { icon: ClipboardList, title: "입학안내", href: "/admissions/guidelines", external: false },
   { icon: Images, title: "사진자료실", href: "/photos", external: false },

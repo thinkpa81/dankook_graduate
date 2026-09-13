@@ -14,6 +14,7 @@ import {
   resolveSessionSecret,
   type AppRole,
 } from "./security";
+import { CANONICAL_ORIGIN } from "./seo";
 
 const app = express();
 const httpServer = createServer(app);
@@ -92,6 +93,16 @@ app.use((_req, res, next) => {
 
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (
+    process.env.NODE_ENV === "production"
+    && req.hostname.toLowerCase() === "dankook-graduate.onrender.com"
+  ) {
+    return res.redirect(308, `${CANONICAL_ORIGIN}${req.originalUrl}`);
   }
   next();
 });

@@ -50,7 +50,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/papers" className="hover:text-blue-400 transition-colors flex items-center gap-2 group" data-testid="footer-link-papers">
+                <Link href="/papers/conference" className="hover:text-blue-400 transition-colors flex items-center gap-2 group" data-testid="footer-link-papers">
                   <span className="w-1 h-1 bg-blue-500 rounded-full group-hover:w-2 transition-all" />
                   논문
                 </Link>
