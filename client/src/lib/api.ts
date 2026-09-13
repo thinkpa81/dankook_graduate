@@ -137,6 +137,13 @@ export interface PhotoAlbum {
 
 export type PhotoAlbumInput = Pick<PhotoAlbum, "title" | "content" | "organization" | "date">;
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export interface Talent {
   id: number;
   name: string;
@@ -174,7 +181,7 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
     } catch {
       // ignore
     }
-    throw new Error(errorMessage);
+    throw new ApiError(errorMessage, res.status);
   }
   return res.json();
 }

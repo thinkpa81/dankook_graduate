@@ -15,7 +15,7 @@ import { MemoryStorage } from "../server/storage";
 
 const robots = buildRobotsTxt();
 assert.match(robots, /^User-agent: \*/m);
-assert.match(robots, /Disallow: \/admin/);
+assert.doesNotMatch(robots, /Disallow:/);
 assert.equal(CANONICAL_ORIGIN, "https://dankookaims.org");
 assert.match(robots, /Sitemap: https:\/\/dankookaims\.org\/sitemap\.xml/);
 
@@ -49,12 +49,29 @@ const noticePage = await resolveSeoPage("/notices/1", storage);
 const noticeHtml = renderSeoHtml(indexTemplate, noticePage);
 assert.equal(noticePage.status, 200);
 assert.match(noticeHtml, /<link rel="canonical" href="https:\/\/dankookaims\.org\/notices\/1" \/>/);
+assert.equal((noticeHtml.match(/<main id="seo-fallback"/g) || []).length, 1);
+assert.match(noticeHtml, /<h1 id="seo-fallback-title">.+<\/h1>/);
+assert.match(noticeHtml, /<a href="\/about">학과 소개<\/a>/);
+assert.doesNotMatch(noticeHtml, /seo-fallback-slot/);
 assert.doesNotMatch(noticeHtml, /onrender\.com/);
 
 const missingPage = await resolveSeoPage("/not-a-real-page", storage);
 const missingHtml = renderSeoHtml(indexTemplate, missingPage);
 assert.equal(missingPage.status, 404);
 assert.match(missingHtml, /content="noindex,nofollow"/);
+assert.match(missingHtml, /<h1 id="seo-fallback-title">페이지를 찾을 수 없습니다<\/h1>/);
+
+const escapedHtml = renderSeoHtml(indexTemplate, {
+  canonicalPath: "/notices/99",
+  title: "<script>alert(1)</script>",
+  heading: '<img src=x onerror="alert(1)">',
+  description: "본문 & <script>alert(2)</script>",
+  indexable: true,
+  status: 200,
+});
+assert.doesNotMatch(escapedHtml, /<script>alert\([12]\)<\/script>/);
+assert.doesNotMatch(escapedHtml, /<img src=x onerror=/);
+assert.match(escapedHtml, /&lt;script&gt;alert\(2\)&lt;\/script&gt;/);
 
 const app = express();
 registerSeoRoutes(app, storage);

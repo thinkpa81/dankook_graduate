@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
   { title: "공지사항", href: "/notices" },
   {
     title: "논문",
-    href: "/papers",
+    href: "/papers/conference",
     children: [
       { title: "학술대회", href: "/papers/conference" },
       { title: "저널", href: "/papers/journal" },

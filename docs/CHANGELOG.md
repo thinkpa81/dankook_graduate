@@ -4,9 +4,11 @@
 ## 2026-09-13
 - 대표 URL을 `https://dankookaims.org`로 통일하고 canonical·Open Graph·Twitter 이미지·구조화 데이터에 커스텀 도메인을 적용
 - 네이버·일반 검색로봇이 읽을 수 있는 동적 `robots.txt`, `sitemap.xml`, `rss.xml`을 추가하고 공지·사진 상세 URL을 사이트맵에 포함
-- 주요 화면과 공지·사진 상세의 서버 응답에 경로별 제목·설명·canonical을 제공하고 관리자 화면과 404 응답은 `noindex` 처리
+- 주요 화면과 공지·사진 상세의 서버 응답에 경로별 제목·설명·canonical을 제공하고 관리자 화면과 404 응답은 크롤러가 확인 가능한 `noindex`로 처리
+- JavaScript 실행 전 초기 HTML에도 화면별 핵심 설명과 주요 내부 링크를 제공해 검색로봇의 SPA 콘텐츠 탐색을 보완
 - 존재하지 않는 경로를 실제 404로 응답하고 기존 호환 경로는 대표 경로로 308 이동하며 Render 기본 도메인은 커스텀 도메인으로 통합
-- 네이버 소유확인 토큰을 `NAVER_SITE_VERIFICATION` 배포환경 변수로 안전하게 주입할 수 있도록 구성하고 SEO 스모크 테스트 추가
+- 네이버 소유확인 토큰을 `NAVER_SITE_VERIFICATION` 배포환경 변수로 안전하게 주입할 수 있도록 구성하고 SEO 스모크 테스트를 배포 전 CI 필수 검사에 추가
+- 배포 검증에서 새로 탐지된 multipart·쿼리 파서 서비스 거부 취약점을 해결하도록 Multer와 `qs`를 보안 패치 버전으로 고정
 
 ## 2026-09-08
 - 학술대회·저널 논문 등록과 수정에 PDF·DOC·DOCX·HWP·HWPX·PPT·PPTX·JPG·JPEG·PNG·WebP 첨부파일을 최대 5개, 파일당 10MB, 논문당 합계 30MB까지 추가하고 확장자·MIME·파일 시그니처를 함께 검증

@@ -35,6 +35,9 @@ jobs:
       - name: Security smoke checks
         run: npm run test:security
 
+      - name: SEO smoke checks
+        run: npm run test:seo
+
       - name: Production build
         run: npm run build
 

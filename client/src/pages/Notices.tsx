@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useParams } from "wouter";
+import { useHistoryState } from "wouter/use-browser-location";
 import { motion } from "framer-motion";
 import { Calendar, Eye, FileText, Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Upload, X, Download, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +30,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
-import { api, Notice } from "@/lib/api";
+import { api, ApiError, Notice } from "@/lib/api";
 import { useSession } from "@/hooks/use-session";
 
 interface FileAttachment {
@@ -44,13 +45,20 @@ const ITEMS_PER_PAGE = 5;
 const MAX_NOTICE_FILES = 5;
 const MAX_NOTICE_FILE_BYTES = 10 * 1024 * 1024;
 
+type NoticeHistoryState = {
+  fromNotices?: boolean;
+};
+
 export default function Notices() {
   const params = useParams<{ id?: string }>();
   const [, setLocation] = useLocation();
-  const openedNoticeIdRef = useRef<number | null>(null);
+  const historyState = useHistoryState<NoticeHistoryState | null>();
+  const pendingNavigationIdRef = useRef<number | null>(null);
+  const detailRequestIdRef = useRef(0);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,13 +79,13 @@ export default function Notices() {
   const isAdmin = sessionUser?.role === "ADMIN";
 
   const loadNotices = async () => {
-    setError(null);
+    setListError(null);
     try {
       const data = await api.notices.list();
       setNotices(data);
     } catch (e: any) {
       console.error("Failed to load notices", e);
-      setError("공지사항을 불러오는데 실패했습니다: " + (e.message || "알 수 없는 오류"));
+      setListError("공지사항을 불러오는데 실패했습니다: " + (e.message || "알 수 없는 오류"));
     } finally {
       setLoading(false);
     }
@@ -249,49 +257,70 @@ export default function Notices() {
     setIsEditOpen(true);
   };
 
-  const openView = async (notice: Notice) => {
-    try {
-      await api.notices.incrementViews(notice.id);
-      const updated = await api.notices.get(notice.id);
-      setViewingNotice(updated);
-      setNotices(prev => prev.map(n => n.id === notice.id ? updated : n));
-      setIsViewOpen(true);
-    } catch (e) {
-      setViewingNotice(notice);
-      setIsViewOpen(true);
-    }
-  };
-
   useEffect(() => {
+    const requestId = ++detailRequestIdRef.current;
+    pendingNavigationIdRef.current = null;
+    setDetailError(null);
     if (!params.id) {
-      if (openedNoticeIdRef.current !== null) {
-        openedNoticeIdRef.current = null;
+      setViewingNotice(null);
+      setIsViewOpen(false);
+      return;
+    }
+    const noticeId = Number(params.id);
+    if (!Number.isInteger(noticeId) || noticeId < 1) {
+      setLocation("/notices", { replace: true });
+      return;
+    }
+    void (async () => {
+      try {
+        await api.notices.incrementViews(noticeId).catch(() => undefined);
+        const updated = await api.notices.get(noticeId);
+        if (detailRequestIdRef.current !== requestId) return;
+        setDetailError(null);
+        setViewingNotice(updated);
+        setNotices(previous => previous.map(notice => notice.id === noticeId ? updated : notice));
+        setIsViewOpen(true);
+      } catch (detailRequestError) {
+        if (detailRequestIdRef.current !== requestId) return;
+        console.error("Failed to load notice detail", detailRequestError);
+        if (detailRequestError instanceof ApiError && detailRequestError.status === 404) {
+          setLocation("/notices", { replace: true });
+          return;
+        }
+        setDetailError("공지사항 상세 내용을 불러오지 못했습니다.");
         setViewingNotice(null);
         setIsViewOpen(false);
       }
-      return;
-    }
-    if (loading) return;
-    const noticeId = Number(params.id);
-    const notice = Number.isInteger(noticeId)
-      ? notices.find(candidate => candidate.id === noticeId)
-      : undefined;
-    if (!notice) {
-      setLocation("/notices");
-      return;
-    }
-    if (openedNoticeIdRef.current === noticeId) return;
-    openedNoticeIdRef.current = noticeId;
-    void openView(notice);
-  }, [loading, notices, params.id, setLocation]);
+    })();
+
+    return () => {
+      if (detailRequestIdRef.current === requestId) detailRequestIdRef.current += 1;
+    };
+  }, [params.id, setLocation]);
 
   const handleViewOpenChange = (open: boolean) => {
     setIsViewOpen(open);
     if (!open) {
+      detailRequestIdRef.current += 1;
+      setDetailError(null);
       setViewingNotice(null);
-      openedNoticeIdRef.current = null;
-      if (params.id) setLocation("/notices");
+      if (params.id) {
+        if (historyState?.fromNotices) {
+          window.history.back();
+        } else {
+          setLocation("/notices", { replace: true });
+        }
+      }
     }
+  };
+
+  const handleNoticeLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, noticeId: number) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (params.id === String(noticeId) || pendingNavigationIdRef.current === noticeId) {
+      event.preventDefault();
+      return;
+    }
+    pendingNavigationIdRef.current = noticeId;
   };
 
   const openAdd = () => {
@@ -353,7 +382,7 @@ export default function Notices() {
                   <div className="hidden md:flex col-span-1 items-center justify-center text-gray-500 text-sm">{displayNumber}</div>
                   <div className={`col-span-1 flex items-center gap-2 ${isAdmin ? "md:col-span-6" : "md:col-span-7"}`}>
                     {notice.isImportant && <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white border-0 text-xs">중요</Badge>}
-                    <Link href={`/notices/${notice.id}`} className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" data-testid={`link-notice-${notice.id}`}>{notice.title}</Link>
+                    <Link href={`/notices/${notice.id}`} state={{ fromNotices: true }} onClick={(event) => handleNoticeLinkClick(event, notice.id)} className="cursor-pointer text-left text-base font-medium text-gray-900 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" data-testid={`link-notice-${notice.id}`}>{notice.title}</Link>
                     {notice.comments.length > 0 && <span className="text-xs text-gray-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />{notice.comments.length}</span>}
                   </div>
                   <div className="col-span-1 md:col-span-2 flex items-center md:justify-center text-sm text-gray-500"><Calendar className="w-4 h-4 mr-1.5 md:hidden" />{notice.date}</div>
@@ -366,14 +395,21 @@ export default function Notices() {
                   )}
                 </div>
               )})}
-              {!loading && error && (
-                <div className="p-16 text-center text-red-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">{error}</p></div>
+              {!loading && listError && (
+                <div className="p-16 text-center text-red-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">{listError}</p></div>
               )}
-              {!loading && !error && filteredNotices.length === 0 && (
+              {!loading && !listError && filteredNotices.length === 0 && (
                 <div className="p-16 text-center text-gray-500"><FileText className="w-12 h-12 mx-auto mb-4 opacity-30" /><p className="text-base">검색 결과가 없습니다.</p></div>
               )}
             </CardContent>
           </Card>
+
+          {params.id && detailError && (
+            <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-center text-red-700">
+              <p>{detailError}</p>
+              <Button variant="outline" className="mt-3" onClick={() => setLocation("/notices", { replace: true })}>목록으로 돌아가기</Button>
+            </div>
+          )}
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-8">

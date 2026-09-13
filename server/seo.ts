@@ -22,6 +22,7 @@ type RssNotice = {
 export type SeoPage = {
   canonicalPath: string;
   description: string;
+  heading: string;
   indexable: boolean;
   status: 200 | 404;
   title: string;
@@ -30,51 +31,55 @@ export type SeoPage = {
 const staticPages = new Map<string, Omit<SeoPage, "canonicalPath" | "status">>([
   ["/", {
     title: SITE_NAME,
+    heading: "데이터로 지식을 만들고, 미래를 설계합니다",
     description: DEFAULT_DESCRIPTION,
     indexable: true,
   }],
   ["/about", {
     title: `학과 소개 | ${SITE_NAME}`,
+    heading: "학과 소개",
     description: "데이터사이언스·AI·머신러닝·메타버스융합 교육과 연구를 수행하는 데이터지식서비스공학과를 소개합니다.",
     indexable: true,
   }],
   ["/notices", {
     title: `공지사항 | ${SITE_NAME}`,
+    heading: "공지사항",
     description: "단국대학교 대학원 데이터지식서비스공학과의 학사 일정, 행사 및 주요 공지사항을 확인하세요.",
-    indexable: true,
-  }],
-  ["/papers", {
-    title: `논문 | ${SITE_NAME}`,
-    description: "데이터지식서비스공학과의 국내외 학술대회 및 학술지 연구 성과를 확인하세요.",
     indexable: true,
   }],
   ["/papers/conference", {
     title: `학술대회 논문 | ${SITE_NAME}`,
+    heading: "학술대회 논문",
     description: "데이터지식서비스공학과의 국내외 학술대회 발표 논문과 연구 성과를 확인하세요.",
     indexable: true,
   }],
   ["/papers/journal", {
     title: `저널 논문 | ${SITE_NAME}`,
+    heading: "저널 논문",
     description: "데이터지식서비스공학과의 국내외 학술지 게재 논문과 연구 성과를 확인하세요.",
     indexable: true,
   }],
   ["/regulations", {
     title: `학과 내규 | ${SITE_NAME}`,
+    heading: "학과 내규",
     description: "데이터지식서비스공학과의 학사 운영 기준과 학과 내규를 확인하세요.",
     indexable: true,
   }],
   ["/admissions/guidelines", {
     title: `입학안내·모집요강 | ${SITE_NAME}`,
+    heading: "입학안내·모집요강",
     description: "단국대학교 대학원 데이터지식서비스공학과의 입학안내와 최신 모집요강을 확인하세요.",
     indexable: true,
   }],
   ["/photos", {
     title: `사진자료실 | ${SITE_NAME}`,
+    heading: "사진자료실",
     description: "데이터지식서비스공학과의 교육, 연구 및 학술 활동 사진을 확인하세요.",
     indexable: true,
   }],
   ["/admin", {
     title: `관리자 로그인 | ${SITE_NAME}`,
+    heading: "관리자 로그인",
     description: "데이터지식서비스공학과 사이트 관리자 전용 화면입니다.",
     indexable: false,
   }],
@@ -84,12 +89,22 @@ const sitemapStaticPaths = [
   "/",
   "/about",
   "/notices",
-  "/papers",
   "/papers/conference",
   "/papers/journal",
   "/regulations",
   "/admissions/guidelines",
   "/photos",
+];
+
+const primaryNavigation = [
+  { path: "/", label: "홈" },
+  { path: "/about", label: "학과 소개" },
+  { path: "/notices", label: "공지사항" },
+  { path: "/papers/conference", label: "학술대회 논문" },
+  { path: "/papers/journal", label: "저널 논문" },
+  { path: "/regulations", label: "학과 내규" },
+  { path: "/admissions/guidelines", label: "입학안내" },
+  { path: "/photos", label: "사진자료실" },
 ];
 
 function compactText(value: string, maxLength: number): string {
@@ -129,7 +144,6 @@ export function buildRobotsTxt(): string {
   return [
     "User-agent: *",
     "Allow: /",
-    "Disallow: /admin",
     "",
     `Sitemap: ${CANONICAL_ORIGIN}/sitemap.xml`,
     "",
@@ -204,6 +218,7 @@ export async function resolveSeoPage(pathname: string, storage: IStorage): Promi
       return {
         canonicalPath: pathname,
         title: `${compactText(notice.title, 70)} | 공지사항`,
+        heading: compactText(notice.title, 120),
         description: compactText(notice.content || `${notice.title} 공지사항입니다.`, 160),
         indexable: true,
         status: 200,
@@ -218,6 +233,7 @@ export async function resolveSeoPage(pathname: string, storage: IStorage): Promi
       return {
         canonicalPath: pathname,
         title: `${compactText(photo.album.title, 70)} | 사진자료실`,
+        heading: compactText(photo.album.title, 120),
         description: compactText(photo.album.content || `${photo.album.title} 사진자료입니다.`, 160),
         indexable: true,
         status: 200,
@@ -228,6 +244,7 @@ export async function resolveSeoPage(pathname: string, storage: IStorage): Promi
   return {
     canonicalPath: pathname,
     title: `페이지를 찾을 수 없습니다 | ${SITE_NAME}`,
+    heading: "페이지를 찾을 수 없습니다",
     description: "요청한 페이지를 찾을 수 없습니다.",
     indexable: false,
     status: 404,
@@ -272,6 +289,26 @@ export function renderSeoHtml(indexTemplate: string, page: SeoPage): string {
       `    <meta name="naver-site-verification" content="${escapeHtmlAttribute(verification)}" />\n  </head>`,
     );
   }
+
+  const navigation = primaryNavigation
+    .map(({ path, label }) => {
+      const current = page.canonicalPath === path ? ' aria-current="page"' : "";
+      return `<li><a href="${path}"${current}>${escapeXml(label)}</a></li>`;
+    })
+    .join("");
+  const initialContent = [
+    '<main id="seo-fallback" aria-labelledby="seo-fallback-title">',
+    `  <h1 id="seo-fallback-title">${escapeXml(page.heading)}</h1>`,
+    `  <p>${escapeXml(page.description)}</p>`,
+    '  <nav aria-label="주요 페이지">',
+    `    <ul>${navigation}</ul>`,
+    "  </nav>",
+    "</main>",
+  ].join("\n");
+  html = html.replace(
+    /<div\s+id="seo-fallback-slot"\s*>\s*<\/div>/i,
+    initialContent,
+  );
 
   return html;
 }
