@@ -61,6 +61,44 @@ assert.equal(missingPage.status, 404);
 assert.match(missingHtml, /content="noindex,nofollow"/);
 assert.match(missingHtml, /<h1 id="seo-fallback-title">페이지를 찾을 수 없습니다<\/h1>/);
 
+const originalNaverVerification = process.env.NAVER_SITE_VERIFICATION;
+const originalGoogleVerification = process.env.GOOGLE_SITE_VERIFICATION;
+try {
+  process.env.NAVER_SITE_VERIFICATION = "naver_test_token_1234567890";
+  process.env.GOOGLE_SITE_VERIFICATION = "google_test_token_1234567890";
+  const templateWithStaleVerification = indexTemplate.replace(
+    "</head>",
+    [
+      '    <meta name="naver-site-verification" content="stale_naver_token" />',
+      '    <meta content="stale_google_token_one" name="google-site-verification">',
+      "    <meta name='google-site-verification' content='stale_google_token_two'>",
+      "  </head>",
+    ].join("\n"),
+  );
+  const verifiedHtml = renderSeoHtml(templateWithStaleVerification, noticePage);
+  assert.equal((verifiedHtml.match(/name=["']naver-site-verification["']/g) || []).length, 1);
+  assert.equal((verifiedHtml.match(/name=["']google-site-verification["']/g) || []).length, 1);
+  assert.match(
+    verifiedHtml,
+    /<meta name="naver-site-verification" content="naver_test_token_1234567890" \/>/,
+  );
+  assert.match(
+    verifiedHtml,
+    /<meta name="google-site-verification" content="google_test_token_1234567890" \/>/,
+  );
+
+  process.env.NAVER_SITE_VERIFICATION = "invalid naver token";
+  process.env.GOOGLE_SITE_VERIFICATION = "invalid google token";
+  const invalidVerificationHtml = renderSeoHtml(templateWithStaleVerification, noticePage);
+  assert.doesNotMatch(invalidVerificationHtml, /name=["']naver-site-verification["']/);
+  assert.doesNotMatch(invalidVerificationHtml, /name=["']google-site-verification["']/);
+} finally {
+  if (originalNaverVerification === undefined) delete process.env.NAVER_SITE_VERIFICATION;
+  else process.env.NAVER_SITE_VERIFICATION = originalNaverVerification;
+  if (originalGoogleVerification === undefined) delete process.env.GOOGLE_SITE_VERIFICATION;
+  else process.env.GOOGLE_SITE_VERIFICATION = originalGoogleVerification;
+}
+
 const escapedHtml = renderSeoHtml(indexTemplate, {
   canonicalPath: "/notices/99",
   title: "<script>alert(1)</script>",
