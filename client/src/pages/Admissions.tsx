@@ -3,6 +3,7 @@ import { CalendarDays, Download, ExternalLink, Eye, FileText, Pencil, Plus, Sear
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
+import TextWithLinks from "@/components/TextWithLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -414,7 +415,7 @@ export default function Admissions() {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-3 whitespace-pre-wrap border-y border-slate-200 py-6 text-[15px] leading-7 text-slate-700 [overflow-wrap:anywhere]">
-            {viewing?.content}
+            <TextWithLinks text={viewing?.content} />
           </div>
           {viewing?.attachmentUrl && (
             <Button asChild className="mt-2 h-auto min-h-11 max-w-full whitespace-normal break-words rounded-md bg-[#2156D9] py-2 font-bold hover:bg-[#1848bc]">

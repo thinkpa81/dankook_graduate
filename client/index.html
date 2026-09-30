@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 
+    <style>
+      #seo-fallback {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 24px;
+        color: #0f172a;
+        font-family: "Noto Sans KR", sans-serif;
+        line-height: 1.7;
+      }
+      #seo-fallback a { color: #2156d9; }
+      /* Keep the server fallback available if the application fails to load. */
+      @media (scripting: enabled) {
+        #seo-fallback {
+          visibility: hidden;
+          animation: reveal-seo-fallback 0s 8s forwards;
+        }
+      }
+      @keyframes reveal-seo-fallback {
+        to { visibility: visible; }
+      }
+    </style>
+
     <title>단국대학교 대학원 데이터지식서비스공학과</title>
     <meta name="description" content="데이터 관리 및 분석 기술과 비즈니스 마인드를 기반으로 미래 인재를 양성하는 단국대학교 대학원 데이터지식서비스공학과입니다." />
     <meta name="robots" content="index,follow,max-image-preview:large" />

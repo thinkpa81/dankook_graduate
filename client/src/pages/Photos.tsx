@@ -37,6 +37,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
+import TextWithLinks from "@/components/TextWithLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1166,9 +1167,9 @@ function PhotoDetail({ albumId, isAdmin }: { albumId: number; isAdmin: boolean }
 
       <div className="mx-auto mt-9 max-w-[822px] border-y border-slate-200 py-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-lg font-black text-slate-900">앨범 설명</h3>
-            <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-slate-600">{album.content || "등록된 설명이 없습니다."}</p>
+            <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-slate-600 [overflow-wrap:anywhere]"><TextWithLinks text={album.content || "등록된 설명이 없습니다."} /></p>
           </div>
           {images.length > 0 && (
             <Button asChild className="h-11 shrink-0 rounded-md bg-[#0B2B50] px-5 font-bold hover:bg-[#123b69]">
