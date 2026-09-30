@@ -30,6 +30,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
+import TextWithLinks from "@/components/TextWithLinks";
 import { api, ApiError, Notice } from "@/lib/api";
 import { useSession } from "@/hooks/use-session";
 
@@ -433,7 +434,7 @@ export default function Notices() {
             </div>
           </DialogHeader>
           <div className="space-y-6 mt-4">
-            <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]"><p className="text-gray-700 whitespace-pre-wrap text-base">{viewingNotice?.content}</p></div>
+            <div className="p-4 bg-gray-50 rounded-lg min-h-[100px]"><p className="text-gray-700 whitespace-pre-wrap text-base [overflow-wrap:anywhere]"><TextWithLinks text={viewingNotice?.content} /></p></div>
             {viewingNotice?.files && viewingNotice.files.length > 0 && (
               <div className="space-y-2">
                 <Label className="font-bold text-base">첨부파일</Label>
@@ -469,7 +470,7 @@ export default function Notices() {
                     <span className="font-bold text-sm">{comment.author}</span>
                     <span className="text-xs text-gray-400">{comment.date}</span>
                   </div>
-                  <p className="text-sm text-gray-600">{comment.content}</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap [overflow-wrap:anywhere]"><TextWithLinks text={comment.content} /></p>
                 </div>
               ))}
             </div>

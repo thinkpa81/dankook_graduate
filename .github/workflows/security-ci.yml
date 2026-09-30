@@ -38,6 +38,9 @@ jobs:
       - name: SEO smoke checks
         run: npm run test:seo
 
+      - name: Content link smoke checks
+        run: npm run test:content
+
       - name: Production build
         run: npm run build
 

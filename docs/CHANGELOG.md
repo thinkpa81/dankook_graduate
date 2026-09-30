@@ -1,6 +1,13 @@
 
 # 변경 이력
 
+## 2026-09-30
+- 공지사항 본문·댓글, 모집요강 본문, 사진자료실 설명의 웹주소를 공통 `TextWithLinks` 컴포넌트로 자동 링크 처리. 기존 글과 이후 작성·수정되는 글 모두 원문 변경 없이 적용
+- HTTP/HTTPS, `www.`와 일반 도메인 주소를 인식하고 주소 끝의 문장부호·괄호를 구분. 프로토콜을 생략한 주소는 HTTPS로 연결하며 줄바꿈·본문 텍스트는 보존
+- 링크를 파란색 밑줄·키보드 포커스로 표시하고 새 창 열기 안내, `noopener noreferrer`, 긴 주소 줄바꿈 적용. HTML은 텍스트로 escape하고 위험 프로토콜 및 사용자정보가 포함된 URL은 링크로 변환하지 않음
+- 첫 방문 시 서버 SEO 기본 제목·메뉴가 React 화면보다 먼저 잠깐 노출되는 현상 수정. JavaScript 활성 환경에서 초기 기본 안내를 숨기고 8초 이후에도 앱이 표시되지 않으면 기본 안내를 복구. JavaScript 비활성 시 기본 안내는 즉시 표시하며 기존 SEO 메타데이터와 CSP 유지
+- URL 인식·원문 보존·HTML escape·새 창 보안 속성을 검증하는 `npm run test:content`를 추가하고 GitHub Actions 검사에 포함
+
 ## 2026-09-13
 - 대표 URL을 `https://dankookaims.org`로 통일하고 canonical·Open Graph·Twitter 이미지·구조화 데이터에 커스텀 도메인을 적용
 - 네이버·일반 검색로봇이 읽을 수 있는 동적 `robots.txt`, `sitemap.xml`, `rss.xml`을 추가하고 공지·사진 상세 URL을 사이트맵에 포함
