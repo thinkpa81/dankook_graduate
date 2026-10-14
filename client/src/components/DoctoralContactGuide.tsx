@@ -17,7 +17,7 @@ export default function DoctoralContactGuide() {
           </span>
           <p className="col-start-2 text-[17px] font-bold tracking-[0.08em] text-[#2156D9] max-[359px]:text-base max-[359px]:tracking-normal sm:text-lg">DOCTORAL PROGRAM CONTACT</p>
           <h3 id="doctoral-contact-heading" className="col-start-2 mt-1.5 text-[2rem] font-black leading-[1.2] tracking-[-0.03em] text-slate-950 max-[359px]:col-span-2 max-[359px]:col-start-1 max-[359px]:mt-2.5 sm:text-[2.5rem] sm:leading-[1.15]">
-            박사과정 컨택
+            석사/석박통합/박사과정 컨택
           </h3>
         </div>
         <p className="mt-6 text-[17px] leading-8 text-slate-600 sm:text-[19px] sm:leading-9">
