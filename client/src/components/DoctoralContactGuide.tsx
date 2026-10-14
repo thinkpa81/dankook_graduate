@@ -1,7 +1,7 @@
 import { GraduationCap, Mail } from "lucide-react";
 
 const professorEmail = "eungkyosuh@dankook.ac.kr";
-const inquirySubject = encodeURIComponent("[박사과정 지원 문의] 본인 이름_지원 희망 연도/학기");
+const inquirySubject = encodeURIComponent("[석사 or 석·박통합 or 박사과정 지원 문의] 본인 이름_지원 희망 연도/학기");
 
 export default function DoctoralContactGuide() {
   return (
@@ -17,7 +17,7 @@ export default function DoctoralContactGuide() {
           </span>
           <p className="col-start-2 text-[17px] font-bold tracking-[0.08em] text-[#2156D9] max-[359px]:text-base max-[359px]:tracking-normal sm:text-lg">DOCTORAL PROGRAM CONTACT</p>
           <h3 id="doctoral-contact-heading" className="col-start-2 mt-1.5 text-[2rem] font-black leading-[1.2] tracking-[-0.03em] text-slate-950 max-[359px]:col-span-2 max-[359px]:col-start-1 max-[359px]:mt-2.5 sm:text-[2.5rem] sm:leading-[1.15]">
-            석사/석박통합/박사과정 컨택
+            석사/석·박통합/박사과정 컨택
           </h3>
         </div>
         <p className="mt-6 text-[17px] leading-8 text-slate-600 sm:text-[19px] sm:leading-9">
@@ -42,9 +42,9 @@ export default function DoctoralContactGuide() {
               <div className="min-w-0 rounded-md border border-blue-100 bg-blue-50/70 px-4 py-3 [overflow-wrap:anywhere]">
                 <p>
                   <span className="mr-3 font-bold text-slate-900">제목:</span>{" "}
-                  [박사과정 지원 문의] 본인 이름_지원 희망 연도/학기
+                  [석사 or 석·박통합 or 박사과정 지원 문의] 본인 이름_지원 희망 연도/학기
                 </p>
-                <p className="mt-1 text-[17px] leading-7 text-slate-600 sm:text-lg">예시: [박사과정 지원 문의] 홍길동_2027년 전기</p>
+                <p className="mt-1 text-[17px] leading-7 text-slate-600 sm:text-lg">예시: [석사 or 석·박통합 or 박사과정 지원 문의] 홍길동_2027년 전기</p>
               </div>
               <p>
                 <span className="font-bold text-slate-900">내용:</span>
